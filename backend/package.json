@@ -1,0 +1,33 @@
+{
+  "name": "lapgiat-backend",
+  "version": "1.0.0",
+  "description": "Backend API Service for Sistem Laporan Kegiatan Harian (Lapgiat) Yayasan Hang Tuah Pengurus Daerah Jakarta",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node seeders/seed.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": [
+    "lapgiat",
+    "express",
+    "backend",
+    "api",
+    "yayasan-hang-tuah"
+  ],
+  "author": "Yayasan Hang Tuah Pengurus Daerah Jakarta",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "pdfkit": "^0.15.0"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0"
+  }
+}

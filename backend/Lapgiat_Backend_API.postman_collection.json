@@ -1,0 +1,629 @@
+{
+	"info": {
+		"_postman_id": "lapgiat-backend-collection-2026",
+		"name": "Lapgiat Backend API - Yayasan Hang Tuah PD Jakarta",
+		"description": "Postman Collection untuk Testing RESTful API Sistem Laporan Kegiatan Harian (Lapgiat) Yayasan Hang Tuah Pengurus Daerah Jakarta.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "Login (Pengurus Daerah)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success && jsonData.data && jsonData.data.token) {",
+									"    pm.collectionVariables.set('token', jsonData.data.token);",
+									"    console.log('Token updated successfully in collection variables');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"pengurus\",\n  \"password\": \"pengurus123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Autentikasi Pengurus Daerah Jakarta (Ketua Pengurus)."
+					},
+					"response": []
+				},
+				{
+					"name": "Login (Kasatdik TK 1)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success && jsonData.data && jsonData.data.token) {",
+									"    pm.collectionVariables.set('token', jsonData.data.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"kasatdik_tk1\",\n  \"password\": \"kasatdik123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Autentikasi Kepala Satdik TK Hang Tuah 1 Tg. Priok."
+					},
+					"response": []
+				},
+				{
+					"name": "Login (Super Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success && jsonData.data && jsonData.data.token) {",
+									"    pm.collectionVariables.set('token', jsonData.data.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Autentikasi Super Administrator Pusat."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile (/me)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						},
+						"description": "Mengambil data profil pengguna yang sedang aktif."
+					},
+					"response": []
+				},
+				{
+					"name": "Ubah Password",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"oldPassword\": \"kasatdik123\",\n  \"newPassword\": \"kasatdikBaru2026\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/change-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"change-password"
+							]
+						},
+						"description": "Mengubah kata sandi pengguna aktif."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Satuan Pendidikan (Satdik)",
+			"item": [
+				{
+					"name": "Get All Satdik",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/satdik",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"satdik"
+							]
+						},
+						"description": "Mendapatkan daftar seluruh Satuan Pendidikan."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Satdik Filtered (TK Only)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/satdik?jenjang=TK",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"satdik"
+							],
+							"query": [
+								{
+									"key": "jenjang",
+									"value": "TK"
+								}
+							]
+						},
+						"description": "Mendapatkan daftar Satdik khusus jenjang TK."
+					},
+					"response": []
+				},
+				{
+					"name": "Create New Satdik",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"kodeSatdik\": \"TK-12\",\n  \"nama\": \"TK Hang Tuah 12 Marunda\",\n  \"jenjang\": \"TK\",\n  \"alamat\": \"Jl. Marunda, Jakarta Utara\",\n  \"orderIndex\": 9.5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/satdik",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"satdik"
+							]
+						},
+						"description": "Menambahkan data Satuan Pendidikan baru (Khusus Super Admin)."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Laporan Kegiatan Harian (Lapgiat)",
+			"item": [
+				{
+					"name": "Get All Lapgiat",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/lapgiat",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"lapgiat"
+							]
+						},
+						"description": "Mendapatkan daftar seluruh entri Lapgiat."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Lapgiat by Date (2026-06-24)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/lapgiat?tanggal=2026-06-24",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"lapgiat"
+							],
+							"query": [
+								{
+									"key": "tanggal",
+									"value": "2026-06-24"
+								}
+							]
+						},
+						"description": "Mendapatkan daftar Lapgiat khusus tanggal tertentu."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Lapgiat with Photos",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "tanggalKegiatan",
+									"value": "2026-06-24",
+									"type": "text"
+								},
+								{
+									"key": "uraianKegiatan",
+									"value": "Kegiatan Senam Bersama, Pembiasaan Keagamaan, dan MBG Bersama",
+									"type": "text"
+								},
+								{
+									"key": "keteranganPeserta",
+									"value": "Diikuti oleh semua Murid Kelompok A dan B",
+									"type": "text"
+								},
+								{
+									"key": "photos",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/lapgiat",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"lapgiat"
+							]
+						},
+						"description": "Membuat entri Lapgiat baru beserta upload foto dokumentasi kegiatan."
+					},
+					"response": []
+				},
+				{
+					"name": "Approval / Change Lapgiat Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"APPROVED\",\n  \"notes\": \"Dokumentasi dan uraian kegiatan sudah sesuai standar Pengurus Daerah.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/lapgiat/1/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"lapgiat",
+								"1",
+								"status"
+							]
+						},
+						"description": "Mengubah status Lapgiat (APPROVED / REVISED / REJECTED) oleh Pengurus Daerah."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4. Export Laporan",
+			"item": [
+				{
+					"name": "Export PDF Laporan Harian",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/export/pdf?tanggal=2026-06-24",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"export",
+								"pdf"
+							],
+							"query": [
+								{
+									"key": "tanggal",
+									"value": "2026-06-24"
+								}
+							]
+						},
+						"description": "Menghasilkan dokumen PDF Laporan Kegiatan Harian resmi Yayasan Hang Tuah."
+					},
+					"response": []
+				},
+				{
+					"name": "Export Excel Rekapan",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/export/excel?tanggal=2026-06-24",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"export",
+								"excel"
+							],
+							"query": [
+								{
+									"key": "tanggal",
+									"value": "2026-06-24"
+								}
+							]
+						},
+						"description": "Mengambil rekapan data Lapgiat dalam format data Excel/JSON."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "5. User Management",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users"
+							]
+						},
+						"description": "Mendapatkan daftar seluruh pengguna sistem (Super Admin / Pengurus Daerah)."
+					},
+					"response": []
+				},
+				{
+					"name": "Create New User",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"kasatdik_tk2\",\n  \"password\": \"kasatdik123\",\n  \"nama\": \"Kasatdik TK Hang Tuah 2 Cilincing\",\n  \"role\": \"KASATDIK\",\n  \"satdikId\": \"2\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users"
+							]
+						},
+						"description": "Menambahkan pengguna baru (Khusus Super Admin)."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Data & Uploads (runtime generated)
+backend/data/
+backend/uploads/
+
+# Environment
+.env
+
+# OS
+Thumbs.db
+.DS_Store
