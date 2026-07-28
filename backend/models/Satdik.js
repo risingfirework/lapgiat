@@ -1,6 +1,14 @@
 const { JsonDB } = require('../config/db');
 
-const SatdikDB = new JsonDB('satdik');
+const SatdikDB = new JsonDB('satdik', {
+  columnMap: {
+    kodeSatdik: 'kode_satdik',
+    orderIndex: 'order_index',
+    parentId: 'parent_id',
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
+  }
+});
 
 module.exports = {
   db: SatdikDB,

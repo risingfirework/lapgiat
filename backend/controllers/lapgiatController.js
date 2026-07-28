@@ -76,6 +76,19 @@ const createLapgiat = async (req, res, next) => {
       });
     }
 
+    if (req.user.role === 'KASATDIK') {
+      const existing = await LapgiatDB.findOne(item =>
+        String(item.satdikId) === String(targetSatdikId) && String(item.tanggalKegiatan) === String(tanggalKegiatan)
+      );
+
+      if (existing) {
+        return res.status(409).json({
+          success: false,
+          message: 'Anda sudah membuat laporan untuk tanggal tersebut.'
+        });
+      }
+    }
+
     const newLapgiat = await LapgiatDB.create({
       satdikId: targetSatdikId,
       tanggalKegiatan,
@@ -88,6 +101,13 @@ const createLapgiat = async (req, res, next) => {
 
     const mediaList = [];
     if (req.files && req.files.length > 0) {
+      if (req.files.length > 4) {
+        return res.status(400).json({
+          success: false,
+          message: 'Maksimal 4 foto dokumentasi yang bisa diunggah.'
+        });
+      }
+
       for (let i = 0; i < req.files.length; i++) {
         const file = req.files[i];
         const media = await LapgiatMediaDB.create({
@@ -135,6 +155,59 @@ const getLapgiatById = async (req, res, next) => {
         ...record,
         satdik,
         media
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateLapgiat = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { tanggalKegiatan, uraianKegiatan, keteranganPeserta } = req.body;
+
+    const record = await LapgiatDB.findById(id);
+    if (!record) {
+      return res.status(404).json({ success: false, message: 'Lapgiat tidak ditemukan.' });
+    }
+
+    if (req.user.role === 'KASATDIK' && String(record.createdBy) !== String(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'Anda tidak berwenang mengubah laporan ini.' });
+    }
+
+    const payload = {
+      tanggalKegiatan: tanggalKegiatan || record.tanggalKegiatan,
+      uraianKegiatan: uraianKegiatan || record.uraianKegiatan,
+      keteranganPeserta: keteranganPeserta !== undefined ? keteranganPeserta : record.keteranganPeserta,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (req.user.role === 'KASATDIK') {
+      const duplicate = await LapgiatDB.findOne(item =>
+        String(item.id) !== String(id) &&
+        String(item.satdikId) === String(record.satdikId) &&
+        String(item.tanggalKegiatan) === String(payload.tanggalKegiatan)
+      );
+
+      if (duplicate) {
+        return res.status(409).json({
+          success: false,
+          message: 'Anda sudah membuat laporan untuk tanggal tersebut.'
+        });
+      }
+    }
+
+    const updated = await LapgiatDB.update(id, payload);
+
+    const mediaList = await LapgiatMediaDB.find(m => String(m.lapgiatId) === String(id));
+
+    return res.status(200).json({
+      success: true,
+      message: 'Lapgiat berhasil diperbarui.',
+      data: {
+        ...updated,
+        media: mediaList
       }
     });
   } catch (error) {
@@ -199,6 +272,7 @@ module.exports = {
   getLapgiatList,
   createLapgiat,
   getLapgiatById,
+  updateLapgiat,
   updateStatus,
   deleteLapgiat
 };

@@ -59,16 +59,17 @@ const exportPdf = async (req, res, next) => {
     doc.moveDown(1);
 
     // Table Headers
-    const startX = 40;
+    const startX = 24;
     let currentY = doc.y;
-    const colWidths = [120, 260, 130]; // Total width ~ 510
+    const colWidths = [95, 145, 145, 145]; // Total width ~ 530
 
-    doc.rect(startX, currentY, 510, 25).fillAndStroke('#f0f0f0', '#000000');
+    doc.rect(startX, currentY, 550, 25).fillAndStroke('#f0f0f0', '#000000');
     doc.fillColor('#000000').font('Helvetica-Bold').fontSize(9);
 
     doc.text('YHT / SATDIK', startX + 5, currentY + 7, { width: colWidths[0] - 10, align: 'center' });
     doc.text('KEGIATAN', startX + colWidths[0] + 5, currentY + 7, { width: colWidths[1] - 10, align: 'center' });
     doc.text('KETERANGAN', startX + colWidths[0] + colWidths[1] + 5, currentY + 7, { width: colWidths[2] - 10, align: 'center' });
+    doc.text('MEDIA', startX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 7, { width: colWidths[3] - 10, align: 'center' });
 
     currentY += 25;
 
@@ -81,7 +82,7 @@ const exportPdf = async (req, res, next) => {
       const keteranganText = lapgiat ? lapgiat.keteranganPeserta : '-';
       const mediaList = lapgiat ? (mediaMap.get(String(lapgiat.id)) || []) : [];
 
-      const rowHeight = 70;
+      const rowHeight = 110;
 
       // Check for Page Overflow
       if (currentY + rowHeight > 750) {
@@ -93,6 +94,7 @@ const exportPdf = async (req, res, next) => {
       doc.rect(startX, currentY, colWidths[0], rowHeight).stroke();
       doc.rect(startX + colWidths[0], currentY, colWidths[1], rowHeight).stroke();
       doc.rect(startX + colWidths[0] + colWidths[1], currentY, colWidths[2], rowHeight).stroke();
+      doc.rect(startX + colWidths[0] + colWidths[1] + colWidths[2], currentY, colWidths[3], rowHeight).stroke();
 
       // Column 1: Satdik
       doc.font('Helvetica-Bold').fontSize(8.5).text(satdikName, startX + 5, currentY + 8, {
@@ -106,26 +108,38 @@ const exportPdf = async (req, res, next) => {
         align: 'left'
       });
 
-      // Embed photos if available
-      let photoX = startX + colWidths[0] + 5;
-      const photoY = currentY + 30;
-      for (let p = 0; p < Math.min(mediaList.length, 2); p++) {
-        const photoPath = path.join(__dirname, '..', mediaList[p].path);
-        if (fs.existsSync(photoPath)) {
-          try {
-            doc.image(photoPath, photoX, photoY, { fit: [55, 35] });
-            photoX += 60;
-          } catch (e) {
-            // Ignore corrupted images
-          }
-        }
-      }
-
       // Column 3: Keterangan
       doc.font('Helvetica').fontSize(8).text(keteranganText, startX + colWidths[0] + colWidths[1] + 5, currentY + 8, {
         width: colWidths[2] - 10,
         align: 'left'
       });
+
+      // Column 4: Media Dokumentasi
+      const photoX = startX + colWidths[0] + colWidths[1] + colWidths[2] + 5;
+      const photoY = currentY + 8;
+      if (mediaList.length > 0) {
+        for (let p = 0; p < Math.min(mediaList.length, 4); p++) {
+          const relPath = mediaList[p].path || '';
+          const photoPath = relPath.startsWith('/uploads/')
+            ? path.join(__dirname, '..', 'uploads', path.basename(relPath))
+            : path.join(__dirname, '..', relPath);
+
+          if (fs.existsSync(photoPath)) {
+            try {
+              const row = Math.floor(p / 2);
+              const col = p % 2;
+              doc.image(photoPath, photoX + (col * 68), photoY + (row * 38), { fit: [60, 32] });
+            } catch (e) {
+              // Ignore corrupted images
+            }
+          }
+        }
+      } else {
+        doc.font('Helvetica-Oblique').fontSize(7).text('Tidak ada dokumentasi', photoX, photoY + 12, {
+          width: colWidths[3] - 10,
+          align: 'center'
+        });
+      }
 
       currentY += rowHeight;
     }

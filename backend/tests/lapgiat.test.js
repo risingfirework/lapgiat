@@ -8,6 +8,7 @@ describe('--- TDD Suite 3: Lapgiat Workflow & Approval Module ---', () => {
   let pengurusToken;
   let kasatdikToken;
   let createdLapgiatId;
+  const reportDate = '2099-12-31';
 
   before(async () => {
     await seedData();
@@ -29,7 +30,7 @@ describe('--- TDD Suite 3: Lapgiat Workflow & Approval Module ---', () => {
     const res = await request(app)
       .post('/api/v1/lapgiat')
       .set('Authorization', `Bearer ${kasatdikToken}`)
-      .field('tanggalKegiatan', '2026-06-25')
+      .field('tanggalKegiatan', reportDate)
       .field('uraianKegiatan', 'Latihan Marching Band dan Pembiasaan Keagamaan')
       .field('keteranganPeserta', 'Diikuti oleh Murid Kelompok B');
 
@@ -43,11 +44,36 @@ describe('--- TDD Suite 3: Lapgiat Workflow & Approval Module ---', () => {
 
   test('GET /api/v1/lapgiat - Filter by date 2026-06-25', async () => {
     const res = await request(app)
-      .get('/api/v1/lapgiat?tanggal=2026-06-25')
+      .get(`/api/v1/lapgiat?tanggal=${reportDate}`)
       .set('Authorization', `Bearer ${pengurusToken}`);
 
     assert.strictEqual(res.statusCode, 200);
     assert.ok(res.body.data.some(l => l.id === createdLapgiatId));
+  });
+
+  test('POST /api/v1/lapgiat - Kasatdik cannot create duplicate report for the same date', async () => {
+    const res = await request(app)
+      .post('/api/v1/lapgiat')
+      .set('Authorization', `Bearer ${kasatdikToken}`)
+      .field('tanggalKegiatan', reportDate)
+      .field('uraianKegiatan', 'Pembaruan laporan yang tidak boleh dibuat ulang')
+      .field('keteranganPeserta', 'Uji duplikasi tanggal');
+
+    assert.strictEqual(res.statusCode, 409);
+    assert.strictEqual(res.body.success, false);
+  });
+
+  test('PATCH /api/v1/lapgiat/:id - Kasatdik can update their own report', async () => {
+    const res = await request(app)
+      .patch(`/api/v1/lapgiat/${createdLapgiatId}`)
+      .set('Authorization', `Bearer ${kasatdikToken}`)
+      .field('tanggalKegiatan', reportDate)
+      .field('uraianKegiatan', 'Latihan Marching Band dan Pembiasaan Keagamaan (Diperbarui)')
+      .field('keteranganPeserta', 'Diikuti oleh Murid Kelompok B (Diperbarui)');
+
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(res.body.success, true);
+    assert.strictEqual(res.body.data.uraianKegiatan, 'Latihan Marching Band dan Pembiasaan Keagamaan (Diperbarui)');
   });
 
   test('PATCH /api/v1/lapgiat/:id/status - Approve Lapgiat as Pengurus', async () => {

@@ -35,13 +35,27 @@ const createSatdik = async (req, res, next) => {
       });
     }
 
-    const newSatdik = await SatdikDB.create({
-      kodeSatdik: kodeSatdik || `SATDIK-${Date.now()}`,
-      nama,
-      jenjang: jenjang.toUpperCase(),
-      alamat: alamat || '',
-      orderIndex: orderIndex || 0
-    });
+    let finalKodeSatdik = kodeSatdik || `SATDIK-${Date.now()}`;
+
+    const existing = await SatdikDB.findOne(item => item.kodeSatdik === finalKodeSatdik);
+    let newSatdik;
+    if (existing) {
+      newSatdik = await SatdikDB.update(existing.id, {
+        kodeSatdik: finalKodeSatdik,
+        nama,
+        jenjang: jenjang.toUpperCase(),
+        alamat: alamat || '',
+        orderIndex: orderIndex || 0
+      });
+    } else {
+      newSatdik = await SatdikDB.create({
+        kodeSatdik: finalKodeSatdik,
+        nama,
+        jenjang: jenjang.toUpperCase(),
+        alamat: alamat || '',
+        orderIndex: orderIndex || 0
+      });
+    }
 
     return res.status(201).json({ success: true, data: newSatdik });
   } catch (error) {

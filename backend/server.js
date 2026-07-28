@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
+const { ensurePostgresConnection } = require('./config/db');
 const routes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
 const seedData = require('./seeders/seed');
@@ -10,8 +11,12 @@ const seedData = require('./seeders/seed');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Run Seeder on Startup
-seedData().catch(err => console.error('[Seeder Error]', err));
+async function initializeApp() {
+  await ensurePostgresConnection();
+  await seedData();
+}
+
+initializeApp().catch(err => console.error('[Startup Error]', err));
 
 // Middleware Global
 app.use(cors());

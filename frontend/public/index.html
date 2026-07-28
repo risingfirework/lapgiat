@@ -20,7 +20,8 @@
         <p>PENGURUS DAERAH JAKARTA</p>
       </div>
     </a>
-    <div class="navbar-menu">
+    <button class="navbar-toggle" id="navbarToggle" type="button" onclick="toggleNavMenu()" aria-label="Toggle menu">Menu</button>
+    <div class="navbar-menu" id="navbarMenu">
       <a href="#dashboard" class="nav-link active" id="navDashboard">Dashboard</a>
       <a href="#lapgiat" class="nav-link" id="navLapgiat">Laporan Kegiatan</a>
       <a href="#export" class="nav-link" id="navExport">Export PDF & Excel</a>
@@ -97,13 +98,13 @@
       </div>
 
       <!-- Quick Action / Filter Header -->
-      <div class="filter-card">
+      <div class="filter-card" id="dashboardFilterCard">
         <div class="filter-inputs">
-          <label style="font-weight: 600; font-size: 0.85rem;">Tanggal:</label>
-          <input type="date" id="filterDate" class="form-control" style="width: auto;" onchange="loadLapgiatData()">
+          <label class="filter-label">Tanggal:</label>
+          <input type="date" id="filterDate" class="form-control filter-control" onchange="loadLapgiatData()">
 
-          <label style="font-weight: 600; font-size: 0.85rem; margin-left: 10px;">Jenjang:</label>
-          <select id="filterJenjang" class="form-control" style="width: auto;" onchange="loadLapgiatData()">
+          <label class="filter-label">Jenjang:</label>
+          <select id="filterJenjang" class="form-control filter-control" onchange="loadLapgiatData()">
             <option value="">Semua Jenjang</option>
             <option value="TK">TK</option>
             <option value="SD">SD</option>
@@ -112,8 +113,8 @@
             <option value="SMA">SMA</option>
           </select>
 
-          <label style="font-weight: 600; font-size: 0.85rem; margin-left: 10px;">Status:</label>
-          <select id="filterStatus" class="form-control" style="width: auto;" onchange="loadLapgiatData()">
+          <label class="filter-label">Status:</label>
+          <select id="filterStatus" class="form-control filter-control" onchange="loadLapgiatData()">
             <option value="">Semua Status</option>
             <option value="SUBMITTED">Submitted</option>
             <option value="APPROVED">Approved</option>
@@ -121,7 +122,7 @@
           </select>
         </div>
 
-        <button class="btn-primary" style="width: auto; padding: 8px 16px;" onclick="openCreateModal()">+ Buat Laporan Barus</button>
+        <button class="btn-primary action-btn" onclick="openCreateModal()">+ Buat Laporan Baru</button>
       </div>
 
       <!-- Data Table -->
@@ -151,29 +152,36 @@
     <div id="exportView" style="display: none;">
       <div class="filter-card">
         <div class="filter-inputs">
-          <label style="font-weight: 600;">Pilih Tanggal Laporan:</label>
-          <input type="date" id="exportDate" class="form-control" style="width: auto;" value="2026-06-24">
+          <label class="filter-label">Pilih Tanggal Laporan:</label>
+          <input type="date" id="exportDate" class="form-control filter-control" value="2026-06-24" onchange="loadPdfPreview()">
         </div>
-        <div style="display: flex; gap: 10px;">
-          <button class="btn-primary" style="background: #10b981; width: auto;" onclick="downloadPdf()">📄 Unduh PDF Resmi</button>
-          <button class="btn-primary" style="background: #0284c7; width: auto;" onclick="downloadExcel()">📊 Unduh Rekapan Excel</button>
+        <div class="action-group">
+          <button class="btn-primary action-btn btn-preview" onclick="loadPdfPreview()">Lihat Preview</button>
+          <button class="btn-primary action-btn btn-download" onclick="downloadPdf()">Unduh PDF Resmi</button>
+          <button class="btn-primary action-btn btn-download" onclick="downloadExcel()">Unduh Rekapan Excel</button>
         </div>
       </div>
 
-      <div class="data-card" style="padding: 2rem; text-align: center;">
-        <h3 style="margin-bottom: 1rem; color: var(--primary-navy);">Pratinjau Format Dokumen Laporan</h3>
-        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Dokumen PDF secara otomatis menyusun seluruh kegiatan Satdik dalam struktur tabel 3 kolom resmi Yayasan Hang Tuah Pengurus Daerah Jakarta.</p>
-        <iframe id="pdfPreviewFrame" style="width: 100%; height: 550px; border: 1px solid var(--border-color); border-radius: var(--radius-md);" src="about:blank"></iframe>
+      <div class="data-card preview-card">
+        <h3 class="preview-title">Pratinjau Format Dokumen Laporan</h3>
+        <p class="preview-description">Dokumen PDF secara otomatis menyusun seluruh kegiatan Satdik dalam struktur tabel 4 kolom resmi Yayasan Hang Tuah Pengurus Daerah Jakarta.</p>
+        <div id="pdfPreviewStatus" class="preview-status">Memuat pratinjau...</div>
+        <iframe id="pdfPreviewFrame" class="preview-frame" src="about:blank"></iframe>
       </div>
     </div>
 
+  </div>
+
+  <div class="mobile-action-bar" id="mobileActionBar" style="display: none;">
+    <button id="mobileFilterBtn" class="btn-primary mobile-action-btn" type="button" onclick="scrollToDashboardFilter()">Filter</button>
+    <button id="mobileCreateBtn" class="btn-primary mobile-action-btn" type="button" onclick="openCreateModal()">+ Buat Laporan</button>
   </div>
 
   <!-- CREATE LAPGIAT MODAL -->
   <div id="createModal" class="modal-backdrop" style="display: none;">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 style="color: var(--primary-navy);">Buat Laporan Kegiatan Harian</h3>
+        <h3 id="createModalTitle" style="color: var(--primary-navy);">Buat Laporan Kegiatan Harian</h3>
         <button class="btn-close" onclick="closeCreateModal()">&times;</button>
       </div>
       <form id="createLapgiatForm" onsubmit="submitLapgiat(event)">
@@ -197,9 +205,9 @@
           </div>
           <div class="preview-grid" id="photoPreviewContainer"></div>
         </div>
-        <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
-          <button type="submit" class="btn-primary">Kirim Laporan</button>
-          <button type="button" class="btn-primary" style="background: #94a3b8;" onclick="closeCreateModal()">Batal</button>
+        <div class="modal-actions">
+          <button id="submitLapgiatBtn" type="submit" class="btn-primary">Kirim Laporan</button>
+          <button type="button" class="btn-primary btn-secondary" onclick="closeCreateModal()">Batal</button>
         </div>
       </form>
     </div>
@@ -213,13 +221,13 @@
         <button class="btn-close" onclick="closeReviewModal()">&times;</button>
       </div>
       <div id="reviewDetails"></div>
-      <div class="form-group" style="margin-top: 1rem;">
+      <div class="form-group review-notes-group">
         <label>Catatan / Instruksi Revisi (Optional)</label>
         <textarea id="reviewNotes" class="form-control" rows="2" placeholder="Tulis catatan jika memerlukan revisi..."></textarea>
       </div>
-      <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
-        <button class="btn-primary" style="background: #10b981;" onclick="processApproval('APPROVED')">Disetujui (Approve)</button>
-        <button class="btn-primary" style="background: #f59e0b;" onclick="processApproval('REVISED')">Minta Revisi</button>
+      <div class="modal-actions">
+        <button class="btn-primary btn-approve" onclick="processApproval('APPROVED')">Disetujui (Approve)</button>
+        <button class="btn-primary btn-revise" onclick="processApproval('REVISED')">Minta Revisi</button>
       </div>
     </div>
   </div>

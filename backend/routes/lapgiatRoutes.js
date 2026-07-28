@@ -10,6 +10,7 @@ router.use(authMiddleware);
 router.get('/', lapgiatController.getLapgiatList);
 router.get('/:id', lapgiatController.getLapgiatById);
 router.post('/', handleUpload, lapgiatController.createLapgiat);
+router.patch('/:id', handleUpload, lapgiatController.updateLapgiat);
 router.patch('/:id/status', roleMiddleware('PENGURUS_DAERAH', 'SUPER_ADMIN'), lapgiatController.updateStatus);
 router.delete('/:id', lapgiatController.deleteLapgiat);
 

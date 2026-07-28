@@ -3,14 +3,32 @@ const API_BASE = '/api/v1';
 let state = {
   token: localStorage.getItem('token') || null,
   user: null,
-  activeLapgiatId: null
+  activeLapgiatId: null,
+  editingLapgiatId: null
 };
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function truncateText(value, maxLength = 70) {
+  const raw = String(value || '');
+  if (raw.length <= maxLength) return raw;
+  return `${raw.slice(0, maxLength)}...`;
+}
 
 // Initialize App on DOM Load
 document.addEventListener('DOMContentLoaded', () => {
   const today = new Date().toISOString().split('T')[0];
-  document.getElementById('filterDate').value = '2026-06-24';
-  document.getElementById('inputTanggal').value = today;
+  const filterDate = document.getElementById('filterDate');
+  if (filterDate) filterDate.value = '2026-06-24';
+  const inputTanggal = document.getElementById('inputTanggal');
+  if (inputTanggal) inputTanggal.value = today;
 
   if (state.token) {
     fetchProfile();
@@ -20,6 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Hash Router Listener
   window.addEventListener('hashchange', handleRoute);
+
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', closeNavMenu);
+  });
 });
 
 function showView(viewId) {
@@ -30,6 +52,60 @@ function showView(viewId) {
 
   const navbar = document.getElementById('navbar');
   if (navbar) navbar.style.display = (viewId === 'loginView') ? 'none' : 'flex';
+
+  const mobileActionBar = document.getElementById('mobileActionBar');
+  if (mobileActionBar) {
+    mobileActionBar.style.display = viewId === 'dashboardView' ? 'flex' : 'none';
+  }
+
+  closeNavMenu();
+}
+
+function toggleNavMenu() {
+  const menu = document.getElementById('navbarMenu');
+  if (!menu) return;
+  menu.classList.toggle('is-open');
+}
+
+function closeNavMenu() {
+  const menu = document.getElementById('navbarMenu');
+  if (!menu) return;
+  menu.classList.remove('is-open');
+}
+
+function setMobileActionState(active) {
+  const filterBtn = document.getElementById('mobileFilterBtn');
+  const createBtn = document.getElementById('mobileCreateBtn');
+
+  if (filterBtn) filterBtn.classList.toggle('is-active', active === 'filter');
+  if (createBtn) createBtn.classList.toggle('is-active', active === 'create');
+}
+
+function scrollToDashboardFilter() {
+  const filterCard = document.getElementById('dashboardFilterCard');
+  if (!filterCard) return;
+
+  setMobileActionState('filter');
+
+  filterCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  const filterDate = document.getElementById('filterDate');
+  if (filterDate) {
+    setTimeout(() => {
+      filterDate.focus();
+    }, 250);
+  }
+
+  setTimeout(() => {
+    setMobileActionState('');
+  }, 1400);
+}
+
+function setDashboardSummary(items) {
+  const satdikCount = document.getElementById('statSatdikCount');
+  if (satdikCount) {
+    satdikCount.innerText = items.length > 0 ? new Set(items.map(i => i.satdik?.id).filter(Boolean)).size : 0;
+  }
 }
 
 function handleRoute() {
@@ -113,6 +189,7 @@ function logout() {
   state.token = null;
   state.user = null;
   localStorage.removeItem('token');
+  closeNavMenu();
   showView('loginView');
 }
 
@@ -136,6 +213,7 @@ async function loadLapgiatData() {
     if (data.success) {
       renderLapgiatTable(data.data);
       updateDashboardStats(data.data);
+      setDashboardSummary(data.data);
     }
   } catch (err) {
     console.error(err);
@@ -163,15 +241,23 @@ function renderLapgiatTable(items) {
 
     const isPengurus = state.user && (state.user.role === 'PENGURUS_DAERAH' || state.user.role === 'SUPER_ADMIN');
 
+    const canEdit = state.user && (state.user.role === 'KASATDIK' || state.user.role === 'PENGURUS_DAERAH' || state.user.role === 'SUPER_ADMIN');
+    const isOwnReport = state.user && item.createdBy === state.user.id;
+    const shortUraian = truncateText(item.uraianKegiatan, 80);
+    const shortPeserta = truncateText(item.keteranganPeserta, 70);
+
     tr.innerHTML = `
-      <td>${index + 1}</td>
-      <td><strong>${item.satdik ? item.satdik.nama : '-'}</strong></td>
-      <td>${item.tanggalKegiatan}</td>
-      <td>${item.uraianKegiatan}</td>
-      <td>${item.keteranganPeserta}</td>
-      <td><span class="badge ${statusBadgeClass}">${item.status}</span></td>
-      <td>
-        ${isPengurus ? `<button class="btn-primary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="openReviewModal('${item.id}')">Review</button>` : `<span style="font-size: 0.8rem; color: #64748b;">-</span>`}
+      <td data-label="No">${index + 1}</td>
+      <td data-label="Satuan Pendidikan"><strong>${item.satdik ? item.satdik.nama : '-'}</strong></td>
+      <td data-label="Tanggal">${item.tanggalKegiatan}</td>
+      <td data-label="Uraian Kegiatan"><span class="lapgiat-ellipsis" title="${escapeHtml(item.uraianKegiatan || '')}">${escapeHtml(shortUraian)}</span></td>
+      <td data-label="Keterangan Peserta"><span class="lapgiat-ellipsis" title="${escapeHtml(item.keteranganPeserta || '')}">${escapeHtml(shortPeserta)}</span></td>
+      <td data-label="Status"><span class="badge ${statusBadgeClass}">${item.status}</span></td>
+      <td data-label="Aksi">
+        ${isPengurus ? `<button class="btn-primary btn-inline" onclick="openReviewModal('${item.id}')">Review</button>` : ''}
+        ${canEdit && isOwnReport ? `<button class="btn-primary btn-inline" style="background: #2563eb;" onclick="openEditModal('${item.id}')">Update</button>` : ''}
+        <button class="btn-primary btn-inline" style="background: #10b981;" onclick="openReviewModal('${item.id}')">Preview</button>
+        <button class="btn-primary btn-inline btn-detail" onclick="openReviewModal('${item.id}')">Detail</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -186,17 +272,56 @@ function updateDashboardStats(items) {
 
 // 3. CREATE LAPGIAT MODAL
 function openCreateModal() {
+  setMobileActionState('create');
   document.getElementById('createModal').style.display = 'flex';
+  document.getElementById('createModalTitle').innerText = 'Buat Laporan Kegiatan Harian';
+  document.getElementById('submitLapgiatBtn').innerText = 'Kirim Laporan';
+  document.getElementById('createLapgiatForm').reset();
+  document.getElementById('photoPreviewContainer').innerHTML = '';
+  state.editingLapgiatId = null;
 }
 
 function closeCreateModal() {
+  setMobileActionState('');
   document.getElementById('createModal').style.display = 'none';
+  document.getElementById('createLapgiatForm').reset();
+  document.getElementById('photoPreviewContainer').innerHTML = '';
+  state.editingLapgiatId = null;
+}
+
+function openEditModal(id) {
+  state.editingLapgiatId = id;
+  document.getElementById('createModal').style.display = 'flex';
+  document.getElementById('createModalTitle').innerText = 'Perbarui Laporan Kegiatan';
+  document.getElementById('submitLapgiatBtn').innerText = 'Simpan Perubahan';
+
+  fetch(`${API_BASE}/lapgiat/${id}`, {
+    headers: { 'Authorization': `Bearer ${state.token}` }
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (!data.success) throw new Error(data.message || 'Gagal memuat laporan');
+      const item = data.data;
+      document.getElementById('inputTanggal').value = item.tanggalKegiatan || '';
+      document.getElementById('inputUraian').value = item.uraianKegiatan || '';
+      document.getElementById('inputKeterangan').value = item.keteranganPeserta || '';
+    })
+    .catch(() => {
+      alert('Gagal memuat detail laporan untuk diubah.');
+      closeCreateModal();
+    });
 }
 
 function previewImages(event) {
   const container = document.getElementById('photoPreviewContainer');
   container.innerHTML = '';
-  const files = event.target.files;
+  const files = Array.from(event.target.files || []);
+
+  if (files.length > 4) {
+    alert('Maksimal 4 foto dokumentasi yang bisa diunggah.');
+    event.target.value = '';
+    return;
+  }
 
   for (let file of files) {
     const reader = new FileReader();
@@ -216,29 +341,38 @@ async function submitLapgiat(e) {
   formData.append('tanggalKegiatan', document.getElementById('inputTanggal').value);
   formData.append('uraianKegiatan', document.getElementById('inputUraian').value);
   formData.append('keteranganPeserta', document.getElementById('inputKeterangan').value);
+  const satdikId = state.user?.satdik?.id || state.user?.satdikId;
+  if (satdikId) formData.append('satdikId', satdikId);
 
   const fileInput = document.getElementById('inputPhotos');
-  for (let i = 0; i < fileInput.files.length; i++) {
-    formData.append('photos', fileInput.files[i]);
+  const files = Array.from(fileInput.files || []);
+  if (files.length > 4) {
+    alert('Maksimal 4 foto dokumentasi yang bisa diunggah.');
+    return;
+  }
+  for (let i = 0; i < files.length; i++) {
+    formData.append('photos', files[i]);
   }
 
   try {
-    const res = await fetch(`${API_BASE}/lapgiat`, {
-      method: 'POST',
+    const url = state.editingLapgiatId ? `${API_BASE}/lapgiat/${state.editingLapgiatId}` : `${API_BASE}/lapgiat`;
+    const method = state.editingLapgiatId ? 'PATCH' : 'POST';
+    const res = await fetch(url, {
+      method,
       headers: { 'Authorization': `Bearer ${state.token}` },
       body: formData
     });
 
     const data = await res.json();
     if (data.success) {
-      alert('Laporan berhasil dikirim!');
+      alert(state.editingLapgiatId ? 'Laporan berhasil diperbarui!' : 'Laporan berhasil dikirim!');
       closeCreateModal();
       loadLapgiatData();
     } else {
-      alert(data.message || 'Gagal mengirim laporan.');
+      alert(data.message || (state.editingLapgiatId ? 'Gagal memperbarui laporan.' : 'Gagal mengirim laporan.'));
     }
   } catch (err) {
-    alert('Terjadi kesalahan saat pengiriman.');
+    alert(state.editingLapgiatId ? 'Terjadi kesalahan saat pembaruan.' : 'Terjadi kesalahan saat pengiriman.');
   }
 }
 
@@ -253,11 +387,16 @@ async function openReviewModal(id) {
 
     if (data.success) {
       const item = data.data;
+      const mediaHtml = (item.media && item.media.length > 0)
+        ? `<div style="margin-top: 1rem;"><strong>Dokumentasi Foto:</strong><div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 0.5rem;">${item.media.map(media => `<img src="${media.path || ''}" alt="Dokumentasi laporan" style="width: 100%; max-height: 140px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0;">`).join('')}</div></div>`
+        : '<p style="margin-top: 1rem;"><strong>Dokumentasi Foto:</strong> Tidak ada foto dokumentasi.</p>';
+
       document.getElementById('reviewDetails').innerHTML = `
-        <p><strong>Satdik:</strong> ${item.satdik ? item.satdik.nama : '-'}</p>
-        <p><strong>Tanggal:</strong> ${item.tanggalKegiatan}</p>
-        <p><strong>Kegiatan:</strong> ${item.uraianKegiatan}</p>
-        <p><strong>Keterangan:</strong> ${item.keteranganPeserta}</p>
+        <p><strong>Satdik:</strong> ${escapeHtml(item.satdik ? item.satdik.nama : '-')}</p>
+        <p><strong>Tanggal:</strong> ${escapeHtml(item.tanggalKegiatan)}</p>
+        <div style="margin-top: 0.5rem;"><strong>Kegiatan & Keterangan:</strong><br>${escapeHtml(item.uraianKegiatan || '-')}</div>
+        <div style="margin-top: 0.5rem; white-space: pre-line;">${escapeHtml(item.keteranganPeserta || '-')}</div>
+        ${mediaHtml}
       `;
       document.getElementById('reviewNotes').value = item.notes || '';
       document.getElementById('reviewModal').style.display = 'flex';
@@ -299,10 +438,34 @@ async function processApproval(status) {
 }
 
 // 5. EXPORT HANDLERS
-function loadPdfPreview() {
+async function loadPdfPreview() {
   const date = document.getElementById('exportDate').value || '2026-06-24';
   const iframe = document.getElementById('pdfPreviewFrame');
-  iframe.src = `${API_BASE}/export/pdf?tanggal=${date}&token=${state.token}`;
+  const status = document.getElementById('pdfPreviewStatus');
+  iframe.src = 'about:blank';
+  if (status) status.innerText = 'Memuat pratinjau PDF...';
+
+  if (!state.token) {
+    if (status) status.innerHTML = '<span style="color: #dc2626;">Silakan login terlebih dahulu untuk melihat pratinjau.</span>';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/export/pdf?tanggal=${date}&_=${Date.now()}`, {
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+
+    if (!res.ok) {
+      throw new Error('Gagal memuat PDF');
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    iframe.src = url;
+    if (status) status.innerText = 'Pratinjau PDF berhasil dimuat.';
+  } catch (err) {
+    if (status) status.innerHTML = '<span style="color: #dc2626;">Pratinjau PDF gagal dimuat. Silakan coba lagi.</span>';
+  }
 }
 
 async function downloadPdf() {
