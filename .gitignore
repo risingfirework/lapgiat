@@ -7,6 +7,8 @@ backend/uploads/
 
 # Environment
 .env
+!.env
+!backend/.env
 
 # OS
 Thumbs.db
