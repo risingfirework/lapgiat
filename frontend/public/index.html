@@ -173,135 +173,221 @@
 
     <!-- 4. ADMIN VIEW -->
     <div id="adminView" style="display: none;">
-      <div class="data-card admin-card">
-        <h3 class="admin-title">Pengaturan Header Logo</h3>
-        <div class="admin-grid">
-          <div class="admin-form-block">
-            <div class="form-group">
-              <label for="headerLogoUrl">URL Logo Header</label>
-              <input type="text" id="headerLogoUrl" class="form-control" placeholder="Contoh: /uploads/logo-yht.png atau https://...">
-            </div>
-            <div class="modal-actions admin-actions">
-              <button id="saveHeaderSettingBtn" class="btn-primary" type="button" onclick="saveHeaderSetting()">Simpan Logo Header</button>
-            </div>
-          </div>
-          <div class="admin-preview-block">
-            <p class="admin-preview-label">Pratinjau Logo</p>
-            <img id="adminHeaderLogoPreview" class="admin-logo-preview" src="" alt="Preview Logo" style="display: none;">
-            <p id="adminHeaderLogoEmpty" class="admin-empty-text">Belum ada logo header diset.</p>
-          </div>
-        </div>
-      </div>
+      <div class="admin-layout">
+        <aside class="admin-sidebar data-card">
+          <h3 class="admin-sidebar-title">Menu Admin</h3>
+          <button id="adminMenuHeader" class="admin-menu-btn active" type="button" onclick="switchAdminSection('header')">Pengaturan Header Logo</button>
+          <button id="adminMenuSatdik" class="admin-menu-btn" type="button" onclick="switchAdminSection('satdik')">CRUD Satdik</button>
+          <button id="adminMenuUser" class="admin-menu-btn" type="button" onclick="switchAdminSection('user')">CRUD User</button>
+        </aside>
 
-      <div class="data-card admin-card">
-        <h3 class="admin-title">CRUD Satdik</h3>
-        <form id="satdikForm" class="admin-user-form" onsubmit="submitSatdikForm(event)">
-          <input type="hidden" id="satdikFormId">
-          <div class="admin-grid">
-            <div class="form-group">
-              <label for="satdikKode">Kode Satdik</label>
-              <input type="text" id="satdikKode" class="form-control" required>
+        <div class="admin-content-panels">
+          <section id="adminPanelHeader" class="data-card admin-card admin-panel">
+            <h3 class="admin-title">Pengaturan Header Logo</h3>
+            <div class="admin-grid">
+              <div class="admin-form-block">
+                <div class="form-group">
+                  <label for="headerLogoFile">Upload Logo Header</label>
+                  <input type="file" id="headerLogoFile" class="form-control" accept="image/png,image/jpeg,image/jpg,image/webp">
+                  <small style="display:block; margin-top:6px; color:#64748b;">Format: JPG, JPEG, PNG, WebP. Maksimal 5MB.</small>
+                </div>
+                <div class="modal-actions admin-actions">
+                  <button id="saveHeaderSettingBtn" class="btn-primary" type="button" onclick="saveHeaderSetting()">Upload Logo Header</button>
+                </div>
+              </div>
+              <div class="admin-preview-block">
+                <p class="admin-preview-label">Pratinjau Logo</p>
+                <img id="adminHeaderLogoPreview" class="admin-logo-preview" src="" alt="Preview Logo" style="display: none;">
+                <p id="adminHeaderLogoEmpty" class="admin-empty-text">Belum ada logo header diset.</p>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="satdikNama">Nama Satdik</label>
-              <input type="text" id="satdikNama" class="form-control" required>
-            </div>
-            <div class="form-group">
-              <label for="satdikJenjang">Jenjang</label>
-              <select id="satdikJenjang" class="form-control" required>
-                <option value="TK">TK</option>
-                <option value="SD">SD</option>
-                <option value="SMP">SMP</option>
-                <option value="SMK">SMK</option>
-                <option value="SMA">SMA</option>
-                <option value="PENGURUS">PENGURUS</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="satdikAlamat">Alamat</label>
-              <input type="text" id="satdikAlamat" class="form-control">
-            </div>
-          </div>
-          <div class="modal-actions admin-actions">
-            <button id="satdikSubmitBtn" class="btn-primary" type="submit">Tambah Satdik</button>
-            <button class="btn-primary btn-secondary" type="button" onclick="resetSatdikForm()">Reset Form</button>
-          </div>
-        </form>
 
-        <div class="table-responsive admin-table-wrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Kode</th>
-                <th>Nama</th>
-                <th>Jenjang</th>
-                <th>Alamat</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="adminSatdikTableBody"></tbody>
-          </table>
-        </div>
-      </div>
+            <h3 class="admin-title" style="margin-top:1.25rem;">Pengaturan Kop PDF Laporan</h3>
+            <form id="pdfKopForm" class="admin-user-form" onsubmit="savePdfKopSetting(event)">
+              <div class="admin-grid">
+                <div class="form-group">
+                  <label for="pdfKopOrgLine1">Baris Organisasi 1</label>
+                  <input type="text" id="pdfKopOrgLine1" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="pdfKopOrgLine2">Baris Organisasi 2</label>
+                  <input type="text" id="pdfKopOrgLine2" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="pdfKopOrgAlign">Posisi Teks Organisasi</label>
+                  <select id="pdfKopOrgAlign" class="form-control">
+                    <option value="center">Tengah</option>
+                    <option value="left">Kiri</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="pdfKopTitleLine1">Judul Utama 1</label>
+                  <input type="text" id="pdfKopTitleLine1" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="pdfKopTitleLine2">Judul Utama 2</label>
+                  <input type="text" id="pdfKopTitleLine2" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="pdfKopTitleAlign">Posisi Judul Kegiatan</label>
+                  <select id="pdfKopTitleAlign" class="form-control">
+                    <option value="center">Tengah</option>
+                    <option value="left">Kiri</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="pdfKopYearAlign">Posisi Baris Tahun Ajaran</label>
+                  <select id="pdfKopYearAlign" class="form-control">
+                    <option value="center">Tengah</option>
+                    <option value="left">Kiri</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="pdfKopSignatureTitle">Jabatan Penandatangan</label>
+                  <input type="text" id="pdfKopSignatureTitle" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="pdfKopSignatureName">Nama Penandatangan</label>
+                  <input type="text" id="pdfKopSignatureName" class="form-control" required>
+                </div>
+              </div>
+              <div class="modal-actions admin-actions">
+                <button id="savePdfKopBtn" class="btn-primary" type="submit">Simpan Kop PDF</button>
+              </div>
+            </form>
 
-      <div class="data-card admin-card">
-        <h3 class="admin-title">CRUD User</h3>
-        <form id="userForm" class="admin-user-form" onsubmit="submitUserForm(event)">
-          <input type="hidden" id="userFormId">
-          <div class="admin-grid">
-            <div class="form-group">
-              <label for="userType">Tipe Input User</label>
-              <select id="userType" class="form-control" onchange="handleUserTypeChange()">
-                <option value="ADMIN">Admin / Pengurus</option>
-                <option value="KASATDIK">Kasatdik</option>
-              </select>
+            <div class="admin-preview-block" id="pdfKopPreviewCard">
+              <p class="admin-preview-label">Preview Kop PDF</p>
+              <div class="pdf-kop-preview">
+                <div id="pdfKopPreviewOrgGroup" class="pdf-kop-preview-group">
+                  <p id="pdfKopPreviewOrgLine1" class="pdf-kop-preview-org">YAYASAN HANG TUAH</p>
+                  <p id="pdfKopPreviewOrgLine2" class="pdf-kop-preview-org">PENGURUS DAERAH JAKARTA</p>
+                </div>
+                <div id="pdfKopPreviewTitleGroup" class="pdf-kop-preview-group">
+                  <p id="pdfKopPreviewTitleLine1" class="pdf-kop-preview-title">KEGIATAN HARIAN DI LINGKUNGAN</p>
+                  <p id="pdfKopPreviewTitleLine2" class="pdf-kop-preview-title">DAERAH JAKARTA YAYASAN HANG TUAH</p>
+                </div>
+                <p class="pdf-kop-preview-ta">TAHUN AJARAN (otomatis dari filter export)</p>
+              </div>
+              <div class="pdf-kop-preview-signature">
+                <p id="pdfKopPreviewSignatureTitle">Ketua Pengurus Daerah</p>
+                <p class="pdf-kop-preview-ttd">Ttd</p>
+                <p id="pdfKopPreviewSignatureName" class="pdf-kop-preview-signature-name">Ny. Hening Uki Prasetia</p>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="userNama">Nama</label>
-              <input type="text" id="userNama" class="form-control" required>
-            </div>
-            <div class="form-group">
-              <label for="userUsername">Username</label>
-              <input type="text" id="userUsername" class="form-control" required>
-            </div>
-            <div class="form-group">
-              <label for="userPassword">Password</label>
-              <input type="password" id="userPassword" class="form-control" placeholder="Wajib untuk user baru">
-            </div>
-            <div id="adminRoleGroup" class="form-group">
-              <label for="userRole">Role Admin / Pengurus</label>
-              <select id="userRole" class="form-control" required>
-                <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-                <option value="PENGURUS_DAERAH">PENGURUS_DAERAH</option>
-              </select>
-            </div>
-            <div id="kasatdikSatdikGroup" class="form-group">
-              <label for="userSatdik">Satdik (wajib untuk Kasatdik)</label>
-              <select id="userSatdik" class="form-control">
-                <option value="">- Pilih Satdik -</option>
-              </select>
-            </div>
-            <div id="userTypeHint" class="admin-type-hint">Mode Admin/Pengurus: satdik tidak wajib.</div>
-          </div>
-          <div class="modal-actions admin-actions">
-            <button id="userSubmitBtn" class="btn-primary" type="submit">Tambah User</button>
-            <button class="btn-primary btn-secondary" type="button" onclick="resetUserForm()">Reset Form</button>
-          </div>
-        </form>
+          </section>
 
-        <div class="table-responsive admin-table-wrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Nama</th>
-                <th>Username</th>
-                <th>Role</th>
-                <th>Satdik ID</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="adminUserTableBody"></tbody>
-          </table>
+          <section id="adminPanelSatdik" class="data-card admin-card admin-panel" style="display: none;">
+            <h3 class="admin-title">CRUD Satdik</h3>
+            <form id="satdikForm" class="admin-user-form" onsubmit="submitSatdikForm(event)">
+              <input type="hidden" id="satdikFormId">
+              <div class="admin-grid">
+                <div class="form-group">
+                  <label for="satdikKode">Kode Satdik</label>
+                  <input type="text" id="satdikKode" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="satdikNama">Nama Satdik</label>
+                  <input type="text" id="satdikNama" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="satdikJenjang">Jenjang</label>
+                  <select id="satdikJenjang" class="form-control" required>
+                    <option value="TK">TK</option>
+                    <option value="SD">SD</option>
+                    <option value="SMP">SMP</option>
+                    <option value="SMK">SMK</option>
+                    <option value="SMA">SMA</option>
+                    <option value="PENGURUS">PENGURUS</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="satdikAlamat">Alamat</label>
+                  <input type="text" id="satdikAlamat" class="form-control">
+                </div>
+              </div>
+              <div class="modal-actions admin-actions">
+                <button id="satdikSubmitBtn" class="btn-primary" type="submit">Tambah Satdik</button>
+                <button class="btn-primary btn-secondary" type="button" onclick="resetSatdikForm()">Reset Form</button>
+              </div>
+            </form>
+
+            <div class="table-responsive admin-table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Kode</th>
+                    <th>Nama</th>
+                    <th>Jenjang</th>
+                    <th>Alamat</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="adminSatdikTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="adminPanelUser" class="data-card admin-card admin-panel" style="display: none;">
+            <h3 class="admin-title">CRUD User</h3>
+            <form id="userForm" class="admin-user-form" onsubmit="submitUserForm(event)">
+              <input type="hidden" id="userFormId">
+              <div class="admin-grid">
+                <div class="form-group">
+                  <label for="userType">Tipe Input User</label>
+                  <select id="userType" class="form-control" onchange="handleUserTypeChange()">
+                    <option value="ADMIN">Admin / Pengurus</option>
+                    <option value="KASATDIK">Kasatdik</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="userNama">Nama</label>
+                  <input type="text" id="userNama" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="userUsername">Username</label>
+                  <input type="text" id="userUsername" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="userPassword">Password</label>
+                  <input type="password" id="userPassword" class="form-control" placeholder="Wajib untuk user baru">
+                </div>
+                <div id="adminRoleGroup" class="form-group">
+                  <label for="userRole">Role Admin / Pengurus</label>
+                  <select id="userRole" class="form-control" required>
+                    <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                    <option value="PENGURUS_DAERAH">PENGURUS_DAERAH</option>
+                  </select>
+                </div>
+                <div id="kasatdikSatdikGroup" class="form-group">
+                  <label for="userSatdik">Satdik (wajib untuk Kasatdik)</label>
+                  <select id="userSatdik" class="form-control">
+                    <option value="">- Pilih Satdik -</option>
+                  </select>
+                </div>
+                <div id="userTypeHint" class="admin-type-hint">Mode Admin/Pengurus: satdik tidak wajib.</div>
+              </div>
+              <div class="modal-actions admin-actions">
+                <button id="userSubmitBtn" class="btn-primary" type="submit">Tambah User</button>
+                <button class="btn-primary btn-secondary" type="button" onclick="resetUserForm()">Reset Form</button>
+              </div>
+            </form>
+
+            <div class="table-responsive admin-table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Nama</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Satdik ID</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="adminUserTableBody"></tbody>
+              </table>
+            </div>
+          </section>
         </div>
       </div>
     </div>

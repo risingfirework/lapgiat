@@ -511,6 +511,52 @@ body.auth-mode {
   margin-bottom: 1rem;
 }
 
+.admin-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 1rem;
+}
+
+.admin-sidebar {
+  padding: 1rem;
+  height: fit-content;
+  position: sticky;
+  top: 84px;
+}
+
+.admin-sidebar-title {
+  color: var(--primary-navy);
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+}
+
+.admin-menu-btn {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+}
+
+.admin-menu-btn.active {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+.admin-content-panels {
+  display: block;
+}
+
+.admin-panel {
+  margin-bottom: 0;
+}
+
 .admin-title {
   color: var(--primary-navy);
   margin-bottom: 1rem;
@@ -571,6 +617,62 @@ body.auth-mode {
   background: #ffffff;
 }
 
+.pdf-kop-preview {
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.9rem;
+  background: #ffffff;
+}
+
+.pdf-kop-preview-group {
+  text-align: center;
+}
+
+.pdf-kop-preview-group.align-left {
+  text-align: left;
+}
+
+.pdf-kop-preview-org {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pdf-kop-preview-title {
+  margin: 0.2rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pdf-kop-preview-ta {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.pdf-kop-preview-ta.align-left {
+  text-align: left;
+}
+
+.pdf-kop-preview-signature {
+  margin-top: 0.8rem;
+  text-align: right;
+  font-size: 0.85rem;
+  color: #1f2937;
+}
+
+.pdf-kop-preview-ttd {
+  margin: 0.35rem 0 1.4rem;
+}
+
+.pdf-kop-preview-signature-name {
+  margin: 0;
+  font-weight: 700;
+}
+
 .mobile-action-bar {
   display: none;
 }
@@ -609,6 +711,21 @@ body.auth-mode {
 
   .preview-frame {
     height: 480px;
+  }
+
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    position: static;
+  }
+
+  .admin-menu-btn {
+    display: inline-flex;
+    width: auto;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
   }
 }
 

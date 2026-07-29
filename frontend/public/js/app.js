@@ -112,10 +112,23 @@ function scrollToDashboardFilter() {
   }, 1400);
 }
 
-function setDashboardSummary(items) {
+async function setDashboardSummary() {
   const satdikCount = document.getElementById('statSatdikCount');
-  if (satdikCount) {
-    satdikCount.innerText = items.length > 0 ? new Set(items.map(i => i.satdik?.id).filter(Boolean)).size : 0;
+  if (!satdikCount || !state.token) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/satdik`, {
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+    const data = await res.json();
+    if (!data.success || !Array.isArray(data.data)) {
+      satdikCount.innerText = '0';
+      return;
+    }
+
+    satdikCount.innerText = String(data.data.length);
+  } catch (err) {
+    satdikCount.innerText = '0';
   }
 }
 
@@ -240,7 +253,7 @@ async function loadLapgiatData() {
     if (data.success) {
       renderLapgiatTable(data.data);
       updateDashboardStats(data.data);
-      setDashboardSummary(data.data);
+      setDashboardSummary();
     }
   } catch (err) {
     console.error(err);
@@ -575,6 +588,36 @@ function setLogoPreview(logoUrl) {
   }
 }
 
+function previewSelectedHeaderLogo(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+
+  const previewUrl = URL.createObjectURL(file);
+  setLogoPreview(previewUrl);
+}
+
+function switchAdminSection(section) {
+  const panelMap = {
+    header: 'adminPanelHeader',
+    satdik: 'adminPanelSatdik',
+    user: 'adminPanelUser'
+  };
+
+  const buttonMap = {
+    header: 'adminMenuHeader',
+    satdik: 'adminMenuSatdik',
+    user: 'adminMenuUser'
+  };
+
+  Object.keys(panelMap).forEach(key => {
+    const panel = document.getElementById(panelMap[key]);
+    const btn = document.getElementById(buttonMap[key]);
+
+    if (panel) panel.style.display = key === section ? 'block' : 'none';
+    if (btn) btn.classList.toggle('active', key === section);
+  });
+}
+
 async function loadHeaderSetting() {
   if (!state.token) return;
 
@@ -587,14 +630,75 @@ async function loadHeaderSetting() {
     if (data.success) {
       const logoUrl = data.data?.logoUrl || '';
       applyHeaderLogo(logoUrl);
-
-      const input = document.getElementById('headerLogoUrl');
-      if (input) input.value = logoUrl;
       setLogoPreview(logoUrl);
+
+      const fileInput = document.getElementById('headerLogoFile');
+      if (fileInput) fileInput.value = '';
     }
   } catch (err) {
     console.error('Gagal memuat pengaturan logo header', err);
   }
+}
+
+async function loadPdfKopSetting() {
+  if (!state.token) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/settings/pdf-kop`, {
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+    const data = await res.json();
+    if (!data.success) return;
+
+    document.getElementById('pdfKopOrgLine1').value = data.data.orgLine1 || '';
+    document.getElementById('pdfKopOrgLine2').value = data.data.orgLine2 || '';
+    document.getElementById('pdfKopOrgAlign').value = data.data.orgAlign || 'center';
+    document.getElementById('pdfKopTitleLine1').value = data.data.titleLine1 || '';
+    document.getElementById('pdfKopTitleLine2').value = data.data.titleLine2 || '';
+    document.getElementById('pdfKopTitleAlign').value = data.data.titleAlign || 'center';
+    document.getElementById('pdfKopYearAlign').value = data.data.yearAlign || 'center';
+    document.getElementById('pdfKopSignatureTitle').value = data.data.signatureTitle || '';
+    document.getElementById('pdfKopSignatureName').value = data.data.signatureName || '';
+    renderPdfKopPreview();
+  } catch (err) {
+    console.error('Gagal memuat pengaturan kop PDF', err);
+  }
+}
+
+function renderPdfKopPreview() {
+  const previewBox = document.getElementById('pdfKopPreviewCard');
+  if (!previewBox) return;
+
+  const orgLine1 = document.getElementById('pdfKopOrgLine1')?.value || 'YAYASAN HANG TUAH';
+  const orgLine2 = document.getElementById('pdfKopOrgLine2')?.value || 'PENGURUS DAERAH JAKARTA';
+  const orgAlign = document.getElementById('pdfKopOrgAlign')?.value || 'center';
+  const titleLine1 = document.getElementById('pdfKopTitleLine1')?.value || 'KEGIATAN HARIAN DI LINGKUNGAN';
+  const titleLine2 = document.getElementById('pdfKopTitleLine2')?.value || 'DAERAH JAKARTA YAYASAN HANG TUAH';
+  const titleAlign = document.getElementById('pdfKopTitleAlign')?.value || 'center';
+  const yearAlign = document.getElementById('pdfKopYearAlign')?.value || 'center';
+  const signatureTitle = document.getElementById('pdfKopSignatureTitle')?.value || 'Ketua Pengurus Daerah';
+  const signatureName = document.getElementById('pdfKopSignatureName')?.value || 'Ny. Hening Uki Prasetia';
+
+  const orgGroup = document.getElementById('pdfKopPreviewOrgGroup');
+  const titleGroup = document.getElementById('pdfKopPreviewTitleGroup');
+  if (orgGroup) orgGroup.classList.toggle('align-left', orgAlign === 'left');
+  if (titleGroup) titleGroup.classList.toggle('align-left', titleAlign === 'left');
+
+  const orgLine1El = document.getElementById('pdfKopPreviewOrgLine1');
+  const orgLine2El = document.getElementById('pdfKopPreviewOrgLine2');
+  const titleLine1El = document.getElementById('pdfKopPreviewTitleLine1');
+  const titleLine2El = document.getElementById('pdfKopPreviewTitleLine2');
+  const yearLineEl = document.querySelector('#pdfKopPreviewCard .pdf-kop-preview-ta');
+  const signatureTitleEl = document.getElementById('pdfKopPreviewSignatureTitle');
+  const signatureNameEl = document.getElementById('pdfKopPreviewSignatureName');
+
+  if (orgLine1El) orgLine1El.textContent = orgLine1;
+  if (orgLine2El) orgLine2El.textContent = orgLine2;
+  if (titleLine1El) titleLine1El.textContent = titleLine1;
+  if (titleLine2El) titleLine2El.textContent = titleLine2;
+  if (yearLineEl) yearLineEl.classList.toggle('align-left', yearAlign === 'left');
+  if (signatureTitleEl) signatureTitleEl.textContent = signatureTitle;
+  if (signatureNameEl) signatureNameEl.textContent = signatureName;
 }
 
 async function loadSatdikOptions() {
@@ -935,18 +1039,27 @@ async function saveHeaderSetting() {
     return;
   }
 
-  const logoUrl = document.getElementById('headerLogoUrl')?.value || '';
+  const fileInput = document.getElementById('headerLogoFile');
+  const file = fileInput?.files?.[0];
+
+  if (!file) {
+    alert('Silakan pilih file logo terlebih dahulu.');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('headerLogo', file);
 
   try {
     const res = await fetch(`${API_BASE}/settings/header`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${state.token}`
       },
-      body: JSON.stringify({ logoUrl })
+      body: formData
     });
-    const data = await res.json();
+
+    const data = await res.json().catch(() => ({ success: false, message: 'Respons server tidak valid.' }));
 
     if (!data.success) {
       alert(data.message || 'Gagal menyimpan logo header.');
@@ -955,9 +1068,53 @@ async function saveHeaderSetting() {
 
     applyHeaderLogo(data.data.logoUrl || '');
     setLogoPreview(data.data.logoUrl || '');
-    alert('Logo header berhasil disimpan.');
+    if (fileInput) fileInput.value = '';
+    alert('Logo header berhasil diunggah.');
   } catch (err) {
     alert('Terjadi kesalahan saat menyimpan logo header.');
+  }
+}
+
+async function savePdfKopSetting(event) {
+  event.preventDefault();
+
+  if (!state.user || state.user.role !== 'SUPER_ADMIN') {
+    alert('Hanya SUPER_ADMIN yang dapat mengubah kop PDF.');
+    return;
+  }
+
+  const payload = {
+    orgLine1: document.getElementById('pdfKopOrgLine1')?.value || '',
+    orgLine2: document.getElementById('pdfKopOrgLine2')?.value || '',
+    orgAlign: document.getElementById('pdfKopOrgAlign')?.value || 'center',
+    titleLine1: document.getElementById('pdfKopTitleLine1')?.value || '',
+    titleLine2: document.getElementById('pdfKopTitleLine2')?.value || '',
+    titleAlign: document.getElementById('pdfKopTitleAlign')?.value || 'center',
+    yearAlign: document.getElementById('pdfKopYearAlign')?.value || 'center',
+    signatureTitle: document.getElementById('pdfKopSignatureTitle')?.value || '',
+    signatureName: document.getElementById('pdfKopSignatureName')?.value || ''
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/settings/pdf-kop`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json().catch(() => ({ success: false, message: 'Respons server tidak valid.' }));
+    if (!data.success) {
+      alert(data.message || 'Gagal menyimpan kop PDF.');
+      return;
+    }
+
+    renderPdfKopPreview();
+    alert('Kop PDF berhasil diperbarui.');
+  } catch (err) {
+    alert('Terjadi kesalahan saat menyimpan kop PDF.');
   }
 }
 
@@ -972,11 +1129,13 @@ async function loadAdminPanel() {
 
   await loadSatdikAdminData();
   await loadUsers();
+  await loadPdfKopSetting();
 
   const canManageUsers = state.user.role === 'SUPER_ADMIN';
   const userForm = document.getElementById('userForm');
   const satdikForm = document.getElementById('satdikForm');
   const saveHeaderBtn = document.getElementById('saveHeaderSettingBtn');
+  const savePdfKopBtn = document.getElementById('savePdfKopBtn');
 
   if (userForm) {
     userForm.style.display = canManageUsers ? 'block' : 'none';
@@ -987,6 +1146,39 @@ async function loadAdminPanel() {
   if (saveHeaderBtn) {
     saveHeaderBtn.style.display = canManageUsers ? 'inline-block' : 'none';
   }
+  if (savePdfKopBtn) {
+    savePdfKopBtn.style.display = canManageUsers ? 'inline-block' : 'none';
+  }
 
   handleUserTypeChange();
+  switchAdminSection('header');
+
+  const headerLogoFileInput = document.getElementById('headerLogoFile');
+  if (headerLogoFileInput && !headerLogoFileInput.dataset.boundPreview) {
+    headerLogoFileInput.addEventListener('change', previewSelectedHeaderLogo);
+    headerLogoFileInput.dataset.boundPreview = '1';
+  }
+
+  const pdfKopInputIds = [
+    'pdfKopOrgLine1',
+    'pdfKopOrgLine2',
+    'pdfKopOrgAlign',
+    'pdfKopTitleLine1',
+    'pdfKopTitleLine2',
+    'pdfKopTitleAlign',
+    'pdfKopYearAlign',
+    'pdfKopSignatureTitle',
+    'pdfKopSignatureName'
+  ];
+
+  pdfKopInputIds.forEach(id => {
+    const field = document.getElementById(id);
+    if (field && !field.dataset.boundPreview) {
+      field.addEventListener('input', renderPdfKopPreview);
+      field.addEventListener('change', renderPdfKopPreview);
+      field.dataset.boundPreview = '1';
+    }
+  });
+
+  renderPdfKopPreview();
 }

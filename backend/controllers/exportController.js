@@ -2,6 +2,8 @@ const PDFDocument = require('pdfkit');
 const { db: LapgiatDB } = require('../models/Lapgiat');
 const { db: LapgiatMediaDB } = require('../models/LapgiatMedia');
 const { db: SatdikDB } = require('../models/Satdik');
+const { db: AppSettingDB } = require('../models/AppSetting');
+const { PDF_KOP_SETTING_KEY, DEFAULT_PDF_KOP } = require('./settingController');
 const path = require('path');
 const fs = require('fs');
 
@@ -23,6 +25,14 @@ const exportPdf = async (req, res, next) => {
 
     const allLapgiat = await LapgiatDB.find();
     const allMedia = await LapgiatMediaDB.find();
+    const kopSetting = await AppSettingDB.findOne(item => item.key === PDF_KOP_SETTING_KEY);
+    const kop = {
+      ...DEFAULT_PDF_KOP,
+      ...((kopSetting && kopSetting.value) ? kopSetting.value : {})
+    };
+    const orgHeaderAlign = String(kop.orgAlign || 'center').toLowerCase() === 'left' ? 'left' : 'center';
+    const titleHeaderAlign = String(kop.titleAlign || 'center').toLowerCase() === 'left' ? 'left' : 'center';
+    const yearHeaderAlign = String(kop.yearAlign || 'center').toLowerCase() === 'left' ? 'left' : 'center';
 
     const mediaMap = new Map();
     allMedia.forEach(m => {
@@ -39,6 +49,7 @@ const exportPdf = async (req, res, next) => {
 
     // Setup PDF Document
     const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    const startX = 24;
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Lapgiat_${queryDate}.pdf`);
@@ -46,20 +57,19 @@ const exportPdf = async (req, res, next) => {
     doc.pipe(res);
 
     // Header
-    doc.font('Helvetica-Bold').fontSize(12).text('YAYASAN HANG TUAH', { align: 'center' });
-    doc.font('Helvetica-Bold').fontSize(12).text('PENGURUS DAERAH JAKARTA', { align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(12).text(kop.orgLine1, startX, doc.y, { width: 550, align: orgHeaderAlign });
+    doc.font('Helvetica-Bold').fontSize(12).text(kop.orgLine2, startX, doc.y, { width: 550, align: orgHeaderAlign });
     doc.moveDown(0.5);
 
-    doc.font('Helvetica-Bold').fontSize(13).text('KEGIATAN HARIAN DI LINGKUNGAN', { align: 'center' });
-    doc.font('Helvetica-Bold').fontSize(13).text('DAERAH JAKARTA YAYASAN HANG TUAH', { align: 'center' });
-    doc.font('Helvetica-Bold').fontSize(11).text(`TAHUN AJARAN ${queryTA}`, { align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(13).text(kop.titleLine1, startX, doc.y, { width: 550, align: titleHeaderAlign });
+    doc.font('Helvetica-Bold').fontSize(13).text(kop.titleLine2, startX, doc.y, { width: 550, align: titleHeaderAlign });
+    doc.font('Helvetica-Bold').fontSize(11).text(`TAHUN AJARAN ${queryTA}`, startX, doc.y, { width: 550, align: yearHeaderAlign });
     doc.moveDown(0.5);
 
     doc.font('Helvetica-Bold').fontSize(11).text(`TANGGAL: ${queryDate.toUpperCase()}`, { align: 'center' });
     doc.moveDown(1);
 
     // Table Headers
-    const startX = 24;
     let currentY = doc.y;
     const colWidths = [95, 145, 145, 145]; // Total width ~ 530
 
@@ -152,11 +162,11 @@ const exportPdf = async (req, res, next) => {
 
     currentY += 20;
     const ttdX = 350;
-    doc.font('Helvetica-Bold').fontSize(9).text('Ketua Pengurus Daerah', ttdX, currentY, { align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(9).text(kop.signatureTitle, ttdX, currentY, { align: 'center' });
     currentY += 15;
     doc.font('Helvetica').fontSize(8.5).text('Ttd', ttdX, currentY, { align: 'center' });
     currentY += 40;
-    doc.font('Helvetica-Bold').fontSize(9.5).text('Ny. Hening Uki Prasetia', ttdX, currentY, { align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(9.5).text(kop.signatureName, ttdX, currentY, { align: 'center' });
 
     doc.end();
   } catch (error) {

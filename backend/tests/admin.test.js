@@ -4,6 +4,11 @@ const request = require('supertest');
 const app = require('../server');
 const seedData = require('../seeders/seed');
 
+const ONE_PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO2pN3cAAAAASUVORK5CYII=',
+  'base64'
+);
+
 describe('--- TDD Suite 6: Admin User CRUD & Header Setting ---', () => {
   let adminToken;
   let pengurusToken;
@@ -78,7 +83,7 @@ describe('--- TDD Suite 6: Admin User CRUD & Header Setting ---', () => {
     const res = await request(app)
       .put('/api/v1/settings/header')
       .set('Authorization', `Bearer ${pengurusToken}`)
-      .send({ logoUrl: '/uploads/logo-test.png' });
+      .attach('headerLogo', ONE_PIXEL_PNG, 'logo-test.png');
 
     assert.strictEqual(res.statusCode, 403);
     assert.strictEqual(res.body.success, false);
@@ -88,11 +93,11 @@ describe('--- TDD Suite 6: Admin User CRUD & Header Setting ---', () => {
     const res = await request(app)
       .put('/api/v1/settings/header')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ logoUrl: '/uploads/logo-test.png' });
+      .attach('headerLogo', ONE_PIXEL_PNG, 'logo-test.png');
 
     assert.strictEqual(res.statusCode, 200);
     assert.strictEqual(res.body.success, true);
-    assert.strictEqual(res.body.data.logoUrl, '/uploads/logo-test.png');
+    assert.match(res.body.data.logoUrl, /^\/uploads\//);
   });
 
   test('GET /api/v1/settings/header - Authenticated user can fetch header logo', async () => {
@@ -103,5 +108,51 @@ describe('--- TDD Suite 6: Admin User CRUD & Header Setting ---', () => {
     assert.strictEqual(res.statusCode, 200);
     assert.strictEqual(res.body.success, true);
     assert.ok(res.body.data.key);
+  });
+
+  test('PUT /api/v1/settings/pdf-kop - Pengurus cannot update PDF kop', async () => {
+    const res = await request(app)
+      .put('/api/v1/settings/pdf-kop')
+      .set('Authorization', `Bearer ${pengurusToken}`)
+      .send({
+        orgLine1: 'YAYASAN HANG TUAH',
+        orgLine2: 'PENGURUS DAERAH JAKARTA',
+        titleLine1: 'KEGIATAN HARIAN',
+        titleLine2: 'LINGKUNGAN YHT',
+        signatureTitle: 'Ketua',
+        signatureName: 'Nama Ketua'
+      });
+
+    assert.strictEqual(res.statusCode, 403);
+    assert.strictEqual(res.body.success, false);
+  });
+
+  test('PUT /api/v1/settings/pdf-kop - Super Admin can update PDF kop', async () => {
+    const res = await request(app)
+      .put('/api/v1/settings/pdf-kop')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        orgLine1: 'YAYASAN HANG TUAH TEST',
+        orgLine2: 'PENGURUS DAERAH TEST',
+        titleLine1: 'KEGIATAN TEST 1',
+        titleLine2: 'KEGIATAN TEST 2',
+        signatureTitle: 'Ketua Test',
+        signatureName: 'Nama Test'
+      });
+
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(res.body.success, true);
+    assert.strictEqual(res.body.data.orgLine1, 'YAYASAN HANG TUAH TEST');
+  });
+
+  test('GET /api/v1/settings/pdf-kop - Authenticated user can fetch PDF kop', async () => {
+    const res = await request(app)
+      .get('/api/v1/settings/pdf-kop')
+      .set('Authorization', `Bearer ${pengurusToken}`);
+
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(res.body.success, true);
+    assert.ok(res.body.data.orgLine1);
+    assert.ok(res.body.data.signatureName);
   });
 });
