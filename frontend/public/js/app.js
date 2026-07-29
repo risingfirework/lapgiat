@@ -4,7 +4,9 @@ let state = {
   token: localStorage.getItem('token') || null,
   user: null,
   activeLapgiatId: null,
-  editingLapgiatId: null
+  editingLapgiatId: null,
+  adminUsers: [],
+  satdikList: []
 };
 
 function escapeHtml(value) {
@@ -45,10 +47,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function showView(viewId) {
-  ['loginView', 'dashboardView', 'exportView'].forEach(id => {
+  ['loginView', 'dashboardView', 'exportView', 'adminView'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = (id === viewId) ? 'block' : 'none';
+    if (!el) return;
+
+    if (id === viewId) {
+      el.style.display = id === 'loginView' ? 'flex' : 'block';
+    } else {
+      el.style.display = 'none';
+    }
   });
+
+  document.body.classList.toggle('auth-mode', viewId === 'loginView');
 
   const navbar = document.getElementById('navbar');
   if (navbar) navbar.style.display = (viewId === 'loginView') ? 'none' : 'flex';
@@ -121,6 +131,15 @@ function handleRoute() {
     showView('exportView');
     document.getElementById('navExport')?.classList.add('active');
     loadPdfPreview();
+  } else if (hash === '#admin') {
+    const canAccessAdmin = state.user && (state.user.role === 'SUPER_ADMIN' || state.user.role === 'PENGURUS_DAERAH');
+    if (!canAccessAdmin) {
+      window.location.hash = '#dashboard';
+      return;
+    }
+    showView('adminView');
+    document.getElementById('navAdmin')?.classList.add('active');
+    loadAdminPanel();
   } else {
     showView('dashboardView');
     document.getElementById('navDashboard')?.classList.add('active');
@@ -152,6 +171,7 @@ async function handleLogin(e) {
     localStorage.setItem('token', state.token);
 
     updateNavbarUser();
+    await loadHeaderSetting();
     window.location.hash = '#dashboard';
     handleRoute();
   } catch (err) {
@@ -173,6 +193,7 @@ async function fetchProfile() {
 
     state.user = data.data;
     updateNavbarUser();
+    await loadHeaderSetting();
     handleRoute();
   } catch (err) {
     logout();
@@ -183,6 +204,11 @@ function updateNavbarUser() {
   if (!state.user) return;
   document.getElementById('navUserName').innerText = state.user.nama || state.user.username;
   document.getElementById('navUserRole').innerText = state.user.role;
+  const navAdmin = document.getElementById('navAdmin');
+  if (navAdmin) {
+    const canAccessAdmin = state.user.role === 'SUPER_ADMIN' || state.user.role === 'PENGURUS_DAERAH';
+    navAdmin.style.display = canAccessAdmin ? 'inline-flex' : 'none';
+  }
 }
 
 function logout() {
@@ -386,6 +412,13 @@ async function openReviewModal(id) {
     const data = await res.json();
 
     if (data.success) {
+      const canReview = state.user && (state.user.role === 'PENGURUS_DAERAH' || state.user.role === 'SUPER_ADMIN');
+      const notesGroup = document.getElementById('reviewNotesGroup');
+      const actionGroup = document.getElementById('reviewActionGroup');
+
+      if (notesGroup) notesGroup.style.display = canReview ? 'block' : 'none';
+      if (actionGroup) actionGroup.style.display = canReview ? 'flex' : 'none';
+
       const item = data.data;
       const mediaHtml = (item.media && item.media.length > 0)
         ? `<div style="margin-top: 1rem;"><strong>Dokumentasi Foto:</strong><div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 0.5rem;">${item.media.map(media => `<img src="${media.path || ''}" alt="Dokumentasi laporan" style="width: 100%; max-height: 140px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0;">`).join('')}</div></div>`
@@ -412,6 +445,11 @@ function closeReviewModal() {
 
 async function processApproval(status) {
   if (!state.activeLapgiatId) return;
+  const canReview = state.user && (state.user.role === 'PENGURUS_DAERAH' || state.user.role === 'SUPER_ADMIN');
+  if (!canReview) {
+    alert('Role Anda tidak memiliki izin untuk approve atau meminta revisi.');
+    return;
+  }
   const notes = document.getElementById('reviewNotes').value;
 
   try {
@@ -503,5 +541,285 @@ async function downloadExcel() {
     }
   } catch (err) {
     alert('Gagal mengunduh Excel.');
+  }
+}
+
+function applyHeaderLogo(logoUrl) {
+  const logo = document.getElementById('appHeaderLogo');
+  if (!logo) return;
+
+  if (logoUrl) {
+    logo.src = logoUrl;
+    logo.style.display = 'inline-block';
+  } else {
+    logo.removeAttribute('src');
+    logo.style.display = 'none';
+  }
+}
+
+function setLogoPreview(logoUrl) {
+  const preview = document.getElementById('adminHeaderLogoPreview');
+  const empty = document.getElementById('adminHeaderLogoEmpty');
+
+  if (!preview || !empty) return;
+
+  if (logoUrl) {
+    preview.src = logoUrl;
+    preview.style.display = 'block';
+    empty.style.display = 'none';
+  } else {
+    preview.removeAttribute('src');
+    preview.style.display = 'none';
+    empty.style.display = 'block';
+  }
+}
+
+async function loadHeaderSetting() {
+  if (!state.token) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/settings/header`, {
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      const logoUrl = data.data?.logoUrl || '';
+      applyHeaderLogo(logoUrl);
+
+      const input = document.getElementById('headerLogoUrl');
+      if (input) input.value = logoUrl;
+      setLogoPreview(logoUrl);
+    }
+  } catch (err) {
+    console.error('Gagal memuat pengaturan logo header', err);
+  }
+}
+
+async function loadSatdikOptions() {
+  const select = document.getElementById('userSatdik');
+  if (!select) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/satdik`, {
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+    const data = await res.json();
+    if (!data.success) return;
+
+    state.satdikList = data.data || [];
+
+    select.innerHTML = '<option value="">- Pilih Satdik -</option>';
+    state.satdikList.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = `${item.nama} (${item.jenjang})`;
+      select.appendChild(opt);
+    });
+  } catch (err) {
+    console.error('Gagal memuat satdik', err);
+  }
+}
+
+function renderAdminUsers() {
+  const tbody = document.getElementById('adminUserTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+  if (!state.adminUsers.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Belum ada data user.</td></tr>';
+    return;
+  }
+
+  state.adminUsers.forEach(user => {
+    const tr = document.createElement('tr');
+    const canManage = state.user && state.user.role === 'SUPER_ADMIN';
+    tr.innerHTML = `
+      <td>${escapeHtml(user.nama || '')}</td>
+      <td>${escapeHtml(user.username || '')}</td>
+      <td>${escapeHtml(user.role || '')}</td>
+      <td>${escapeHtml(user.satdikId || '-')}</td>
+      <td>
+        ${canManage ? `<button class="btn-primary btn-inline" style="background:#2563eb;" onclick="editUser('${user.id}')">Edit</button>` : '-'}
+        ${canManage ? `<button class="btn-primary btn-inline" style="background:#dc2626;" onclick="removeUser('${user.id}')">Hapus</button>` : ''}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function loadUsers() {
+  try {
+    const res = await fetch(`${API_BASE}/users`, {
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+    const data = await res.json();
+    if (data.success) {
+      state.adminUsers = data.data || [];
+      renderAdminUsers();
+    } else {
+      alert(data.message || 'Gagal memuat user.');
+    }
+  } catch (err) {
+    alert('Gagal memuat data user.');
+  }
+}
+
+function handleUserRoleChange() {
+  const role = document.getElementById('userRole')?.value;
+  const satdik = document.getElementById('userSatdik');
+  if (!satdik) return;
+  satdik.disabled = role !== 'KASATDIK';
+  if (role !== 'KASATDIK') satdik.value = '';
+}
+
+function resetUserForm() {
+  const form = document.getElementById('userForm');
+  if (form) form.reset();
+  const userId = document.getElementById('userFormId');
+  if (userId) userId.value = '';
+  const submit = document.getElementById('userSubmitBtn');
+  if (submit) submit.innerText = 'Tambah User';
+  handleUserRoleChange();
+}
+
+function editUser(id) {
+  const user = state.adminUsers.find(u => String(u.id) === String(id));
+  if (!user) return;
+
+  document.getElementById('userFormId').value = user.id;
+  document.getElementById('userNama').value = user.nama || '';
+  document.getElementById('userUsername').value = user.username || '';
+  document.getElementById('userPassword').value = '';
+  document.getElementById('userRole').value = user.role || 'KASATDIK';
+  document.getElementById('userSatdik').value = user.satdikId || '';
+
+  const submit = document.getElementById('userSubmitBtn');
+  if (submit) submit.innerText = 'Update User';
+
+  handleUserRoleChange();
+}
+
+async function submitUserForm(event) {
+  event.preventDefault();
+
+  const id = document.getElementById('userFormId').value;
+  const payload = {
+    nama: document.getElementById('userNama').value,
+    username: document.getElementById('userUsername').value,
+    role: document.getElementById('userRole').value,
+    satdikId: document.getElementById('userRole').value === 'KASATDIK' ? document.getElementById('userSatdik').value : ''
+  };
+
+  const password = document.getElementById('userPassword').value;
+  if (!id && !password) {
+    alert('Password wajib diisi untuk user baru.');
+    return;
+  }
+  if (password) payload.password = password;
+
+  try {
+    const isEdit = Boolean(id);
+    const endpoint = isEdit ? `${API_BASE}/users/${id}` : `${API_BASE}/users`;
+    const method = isEdit ? 'PATCH' : 'POST';
+
+    const res = await fetch(endpoint, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      alert(data.message || 'Gagal menyimpan user.');
+      return;
+    }
+
+    alert(isEdit ? 'User berhasil diperbarui.' : 'User berhasil ditambahkan.');
+    resetUserForm();
+    loadUsers();
+  } catch (err) {
+    alert('Terjadi kesalahan saat menyimpan user.');
+  }
+}
+
+async function removeUser(id) {
+  if (!confirm('Yakin ingin menghapus user ini?')) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/users/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      alert(data.message || 'Gagal menghapus user.');
+      return;
+    }
+
+    alert('User berhasil dihapus.');
+    loadUsers();
+  } catch (err) {
+    alert('Terjadi kesalahan saat menghapus user.');
+  }
+}
+
+async function saveHeaderSetting() {
+  if (!state.user || state.user.role !== 'SUPER_ADMIN') {
+    alert('Hanya SUPER_ADMIN yang dapat mengubah logo header.');
+    return;
+  }
+
+  const logoUrl = document.getElementById('headerLogoUrl')?.value || '';
+
+  try {
+    const res = await fetch(`${API_BASE}/settings/header`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`
+      },
+      body: JSON.stringify({ logoUrl })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      alert(data.message || 'Gagal menyimpan logo header.');
+      return;
+    }
+
+    applyHeaderLogo(data.data.logoUrl || '');
+    setLogoPreview(data.data.logoUrl || '');
+    alert('Logo header berhasil disimpan.');
+  } catch (err) {
+    alert('Terjadi kesalahan saat menyimpan logo header.');
+  }
+}
+
+async function loadAdminPanel() {
+  if (!state.user) return;
+
+  await loadHeaderSetting();
+
+  if (state.user.role !== 'SUPER_ADMIN' && state.user.role !== 'PENGURUS_DAERAH') {
+    return;
+  }
+
+  await loadSatdikOptions();
+  await loadUsers();
+
+  const canManageUsers = state.user.role === 'SUPER_ADMIN';
+  const userForm = document.getElementById('userForm');
+  const saveHeaderBtn = document.getElementById('saveHeaderSettingBtn');
+
+  if (userForm) {
+    userForm.style.display = canManageUsers ? 'block' : 'none';
+  }
+  if (saveHeaderBtn) {
+    saveHeaderBtn.style.display = canManageUsers ? 'inline-block' : 'none';
   }
 }

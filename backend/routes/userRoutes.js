@@ -8,5 +8,7 @@ router.use(authMiddleware);
 
 router.get('/', roleMiddleware('SUPER_ADMIN', 'PENGURUS_DAERAH'), userController.getAllUsers);
 router.post('/', roleMiddleware('SUPER_ADMIN'), userController.createUser);
+router.patch('/:id', roleMiddleware('SUPER_ADMIN'), userController.updateUser);
+router.delete('/:id', roleMiddleware('SUPER_ADMIN'), userController.deleteUser);
 
 module.exports = router;

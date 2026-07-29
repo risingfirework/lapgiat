@@ -6,11 +6,13 @@ const userRoutes = require('./userRoutes');
 const satdikRoutes = require('./satdikRoutes');
 const lapgiatRoutes = require('./lapgiatRoutes');
 const exportRoutes = require('./exportRoutes');
+const settingRoutes = require('./settingRoutes');
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/satdik', satdikRoutes);
 router.use('/lapgiat', lapgiatRoutes);
 router.use('/export', exportRoutes);
+router.use('/settings', settingRoutes);
 
 module.exports = router;

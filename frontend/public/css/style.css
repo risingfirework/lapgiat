@@ -43,6 +43,26 @@ body {
   overflow-x: hidden;
 }
 
+body.auth-mode .container {
+  max-width: 100%;
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+body.auth-mode .login-container {
+  min-height: 100%;
+  width: 100%;
+}
+
+body.auth-mode {
+  min-height: 100vh;
+  padding-bottom: 0;
+}
+
 /* Header & Navbar */
 .navbar {
   background: var(--primary-navy);
@@ -71,6 +91,14 @@ body {
   height: 42px;
   width: auto;
   border-radius: 50%;
+}
+
+.app-header-logo {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .brand-text h1 {
@@ -478,6 +506,61 @@ body {
   margin-top: 1rem;
 }
 
+.admin-card {
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.admin-title {
+  color: var(--primary-navy);
+  margin-bottom: 1rem;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.admin-form-block,
+.admin-preview-block {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  background: #f8fafc;
+}
+
+.admin-preview-label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-logo-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+}
+
+.admin-empty-text {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.admin-actions {
+  margin-top: 1rem;
+}
+
+.admin-user-form {
+  margin-bottom: 1rem;
+}
+
+.admin-table-wrap {
+  margin-top: 0.5rem;
+}
+
 .mobile-action-bar {
   display: none;
 }
@@ -524,6 +607,10 @@ body {
     padding-bottom: 84px;
   }
 
+  body.auth-mode {
+    padding-bottom: 0;
+  }
+
   .container {
     padding: 0 0.75rem;
   }
@@ -534,6 +621,11 @@ body {
 
   .navbar-brand {
     width: 100%;
+  }
+
+  .app-header-logo {
+    width: 36px;
+    height: 36px;
   }
 
   .navbar-toggle {

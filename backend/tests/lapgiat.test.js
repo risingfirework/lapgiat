@@ -8,7 +8,7 @@ describe('--- TDD Suite 3: Lapgiat Workflow & Approval Module ---', () => {
   let pengurusToken;
   let kasatdikToken;
   let createdLapgiatId;
-  const reportDate = '2099-12-31';
+  const reportDate = `${2200 + (Date.now() % 200)}-12-31`;
 
   before(async () => {
     await seedData();

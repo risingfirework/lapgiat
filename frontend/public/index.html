@@ -15,6 +15,7 @@
   <!-- Top Navigation Bar -->
   <nav class="navbar" id="navbar" style="display: none;">
     <a href="#" class="navbar-brand">
+      <img id="appHeaderLogo" class="app-header-logo" src="" alt="Logo Header" style="display: none;">
       <div class="brand-text">
         <h1>YAYASAN HANG TUAH</h1>
         <p>PENGURUS DAERAH JAKARTA</p>
@@ -170,6 +171,83 @@
       </div>
     </div>
 
+    <!-- 4. ADMIN VIEW -->
+    <div id="adminView" style="display: none;">
+      <div class="data-card admin-card">
+        <h3 class="admin-title">Pengaturan Header Logo</h3>
+        <div class="admin-grid">
+          <div class="admin-form-block">
+            <div class="form-group">
+              <label for="headerLogoUrl">URL Logo Header</label>
+              <input type="text" id="headerLogoUrl" class="form-control" placeholder="Contoh: /uploads/logo-yht.png atau https://...">
+            </div>
+            <div class="modal-actions admin-actions">
+              <button id="saveHeaderSettingBtn" class="btn-primary" type="button" onclick="saveHeaderSetting()">Simpan Logo Header</button>
+            </div>
+          </div>
+          <div class="admin-preview-block">
+            <p class="admin-preview-label">Pratinjau Logo</p>
+            <img id="adminHeaderLogoPreview" class="admin-logo-preview" src="" alt="Preview Logo" style="display: none;">
+            <p id="adminHeaderLogoEmpty" class="admin-empty-text">Belum ada logo header diset.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="data-card admin-card">
+        <h3 class="admin-title">CRUD User</h3>
+        <form id="userForm" class="admin-user-form" onsubmit="submitUserForm(event)">
+          <input type="hidden" id="userFormId">
+          <div class="admin-grid">
+            <div class="form-group">
+              <label for="userNama">Nama</label>
+              <input type="text" id="userNama" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="userUsername">Username</label>
+              <input type="text" id="userUsername" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="userPassword">Password</label>
+              <input type="password" id="userPassword" class="form-control" placeholder="Wajib untuk user baru">
+            </div>
+            <div class="form-group">
+              <label for="userRole">Role</label>
+              <select id="userRole" class="form-control" required onchange="handleUserRoleChange()">
+                <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                <option value="PENGURUS_DAERAH">PENGURUS_DAERAH</option>
+                <option value="KASATDIK">KASATDIK</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="userSatdik">Satdik (khusus KASATDIK)</label>
+              <select id="userSatdik" class="form-control">
+                <option value="">- Pilih Satdik -</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-actions admin-actions">
+            <button id="userSubmitBtn" class="btn-primary" type="submit">Tambah User</button>
+            <button class="btn-primary btn-secondary" type="button" onclick="resetUserForm()">Reset Form</button>
+          </div>
+        </form>
+
+        <div class="table-responsive admin-table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Nama</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Satdik ID</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="adminUserTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <div class="mobile-action-bar" id="mobileActionBar" style="display: none;">
@@ -221,11 +299,11 @@
         <button class="btn-close" onclick="closeReviewModal()">&times;</button>
       </div>
       <div id="reviewDetails"></div>
-      <div class="form-group review-notes-group">
+      <div id="reviewNotesGroup" class="form-group review-notes-group">
         <label>Catatan / Instruksi Revisi (Optional)</label>
         <textarea id="reviewNotes" class="form-control" rows="2" placeholder="Tulis catatan jika memerlukan revisi..."></textarea>
       </div>
-      <div class="modal-actions">
+      <div id="reviewActionGroup" class="modal-actions">
         <button class="btn-primary btn-approve" onclick="processApproval('APPROVED')">Disetujui (Approve)</button>
         <button class="btn-primary btn-revise" onclick="processApproval('REVISED')">Minta Revisi</button>
       </div>
