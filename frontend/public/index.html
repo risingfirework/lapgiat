@@ -194,10 +194,68 @@
       </div>
 
       <div class="data-card admin-card">
+        <h3 class="admin-title">CRUD Satdik</h3>
+        <form id="satdikForm" class="admin-user-form" onsubmit="submitSatdikForm(event)">
+          <input type="hidden" id="satdikFormId">
+          <div class="admin-grid">
+            <div class="form-group">
+              <label for="satdikKode">Kode Satdik</label>
+              <input type="text" id="satdikKode" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="satdikNama">Nama Satdik</label>
+              <input type="text" id="satdikNama" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="satdikJenjang">Jenjang</label>
+              <select id="satdikJenjang" class="form-control" required>
+                <option value="TK">TK</option>
+                <option value="SD">SD</option>
+                <option value="SMP">SMP</option>
+                <option value="SMK">SMK</option>
+                <option value="SMA">SMA</option>
+                <option value="PENGURUS">PENGURUS</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="satdikAlamat">Alamat</label>
+              <input type="text" id="satdikAlamat" class="form-control">
+            </div>
+          </div>
+          <div class="modal-actions admin-actions">
+            <button id="satdikSubmitBtn" class="btn-primary" type="submit">Tambah Satdik</button>
+            <button class="btn-primary btn-secondary" type="button" onclick="resetSatdikForm()">Reset Form</button>
+          </div>
+        </form>
+
+        <div class="table-responsive admin-table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Kode</th>
+                <th>Nama</th>
+                <th>Jenjang</th>
+                <th>Alamat</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="adminSatdikTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="data-card admin-card">
         <h3 class="admin-title">CRUD User</h3>
         <form id="userForm" class="admin-user-form" onsubmit="submitUserForm(event)">
           <input type="hidden" id="userFormId">
           <div class="admin-grid">
+            <div class="form-group">
+              <label for="userType">Tipe Input User</label>
+              <select id="userType" class="form-control" onchange="handleUserTypeChange()">
+                <option value="ADMIN">Admin / Pengurus</option>
+                <option value="KASATDIK">Kasatdik</option>
+              </select>
+            </div>
             <div class="form-group">
               <label for="userNama">Nama</label>
               <input type="text" id="userNama" class="form-control" required>
@@ -210,20 +268,20 @@
               <label for="userPassword">Password</label>
               <input type="password" id="userPassword" class="form-control" placeholder="Wajib untuk user baru">
             </div>
-            <div class="form-group">
-              <label for="userRole">Role</label>
-              <select id="userRole" class="form-control" required onchange="handleUserRoleChange()">
+            <div id="adminRoleGroup" class="form-group">
+              <label for="userRole">Role Admin / Pengurus</label>
+              <select id="userRole" class="form-control" required>
                 <option value="SUPER_ADMIN">SUPER_ADMIN</option>
                 <option value="PENGURUS_DAERAH">PENGURUS_DAERAH</option>
-                <option value="KASATDIK">KASATDIK</option>
               </select>
             </div>
-            <div class="form-group">
-              <label for="userSatdik">Satdik (khusus KASATDIK)</label>
+            <div id="kasatdikSatdikGroup" class="form-group">
+              <label for="userSatdik">Satdik (wajib untuk Kasatdik)</label>
               <select id="userSatdik" class="form-control">
                 <option value="">- Pilih Satdik -</option>
               </select>
             </div>
+            <div id="userTypeHint" class="admin-type-hint">Mode Admin/Pengurus: satdik tidak wajib.</div>
           </div>
           <div class="modal-actions admin-actions">
             <button id="userSubmitBtn" class="btn-primary" type="submit">Tambah User</button>

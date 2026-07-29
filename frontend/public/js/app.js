@@ -6,7 +6,8 @@ let state = {
   activeLapgiatId: null,
   editingLapgiatId: null,
   adminUsers: [],
-  satdikList: []
+  satdikList: [],
+  adminSatdik: []
 };
 
 function escapeHtml(value) {
@@ -621,6 +622,137 @@ async function loadSatdikOptions() {
   }
 }
 
+function renderAdminSatdik() {
+  const tbody = document.getElementById('adminSatdikTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+  if (!state.adminSatdik.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Belum ada data satdik.</td></tr>';
+    return;
+  }
+
+  state.adminSatdik.forEach(item => {
+    const tr = document.createElement('tr');
+    const canManage = state.user && state.user.role === 'SUPER_ADMIN';
+    tr.innerHTML = `
+      <td>${escapeHtml(item.kodeSatdik || '')}</td>
+      <td>${escapeHtml(item.nama || '')}</td>
+      <td>${escapeHtml(item.jenjang || '')}</td>
+      <td>${escapeHtml(item.alamat || '-')}</td>
+      <td>
+        ${canManage ? `<button class="btn-primary btn-inline" style="background:#2563eb;" onclick="editSatdik('${item.id}')">Edit</button>` : '-'}
+        ${canManage ? `<button class="btn-primary btn-inline" style="background:#dc2626;" onclick="removeSatdik('${item.id}')">Hapus</button>` : ''}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function loadSatdikAdminData() {
+  try {
+    const res = await fetch(`${API_BASE}/satdik`, {
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+    const data = await res.json();
+    if (!data.success) {
+      alert(data.message || 'Gagal memuat data satdik.');
+      return;
+    }
+
+    state.adminSatdik = data.data || [];
+    state.satdikList = data.data || [];
+    renderAdminSatdik();
+    await loadSatdikOptions();
+  } catch (err) {
+    alert('Gagal memuat data satdik.');
+  }
+}
+
+function resetSatdikForm() {
+  const form = document.getElementById('satdikForm');
+  if (form) form.reset();
+  const id = document.getElementById('satdikFormId');
+  if (id) id.value = '';
+  const submit = document.getElementById('satdikSubmitBtn');
+  if (submit) submit.innerText = 'Tambah Satdik';
+}
+
+function editSatdik(id) {
+  const satdik = state.adminSatdik.find(item => String(item.id) === String(id));
+  if (!satdik) return;
+
+  document.getElementById('satdikFormId').value = satdik.id;
+  document.getElementById('satdikKode').value = satdik.kodeSatdik || '';
+  document.getElementById('satdikNama').value = satdik.nama || '';
+  document.getElementById('satdikJenjang').value = satdik.jenjang || 'TK';
+  document.getElementById('satdikAlamat').value = satdik.alamat || '';
+
+  const submit = document.getElementById('satdikSubmitBtn');
+  if (submit) submit.innerText = 'Update Satdik';
+}
+
+async function submitSatdikForm(event) {
+  event.preventDefault();
+
+  const id = document.getElementById('satdikFormId').value;
+  const payload = {
+    kodeSatdik: document.getElementById('satdikKode').value,
+    nama: document.getElementById('satdikNama').value,
+    jenjang: document.getElementById('satdikJenjang').value,
+    alamat: document.getElementById('satdikAlamat').value
+  };
+
+  try {
+    const isEdit = Boolean(id);
+    const endpoint = isEdit ? `${API_BASE}/satdik/${id}` : `${API_BASE}/satdik`;
+    const method = isEdit ? 'PATCH' : 'POST';
+
+    const res = await fetch(endpoint, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      alert(data.message || 'Gagal menyimpan satdik.');
+      return;
+    }
+
+    alert(isEdit ? 'Satdik berhasil diperbarui.' : 'Satdik berhasil ditambahkan.');
+    resetSatdikForm();
+    await loadSatdikAdminData();
+  } catch (err) {
+    alert('Terjadi kesalahan saat menyimpan satdik.');
+  }
+}
+
+async function removeSatdik(id) {
+  if (!confirm('Yakin ingin menghapus satdik ini?')) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/satdik/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      alert(data.message || 'Gagal menghapus satdik.');
+      return;
+    }
+
+    alert('Satdik berhasil dihapus.');
+    await loadSatdikAdminData();
+  } catch (err) {
+    alert('Terjadi kesalahan saat menghapus satdik.');
+  }
+}
+
 function renderAdminUsers() {
   const tbody = document.getElementById('adminUserTableBody');
   if (!tbody) return;
@@ -665,12 +797,29 @@ async function loadUsers() {
   }
 }
 
-function handleUserRoleChange() {
-  const role = document.getElementById('userRole')?.value;
+function handleUserTypeChange() {
+  const userType = document.getElementById('userType')?.value || 'ADMIN';
+  const roleSelect = document.getElementById('userRole');
   const satdik = document.getElementById('userSatdik');
-  if (!satdik) return;
-  satdik.disabled = role !== 'KASATDIK';
-  if (role !== 'KASATDIK') satdik.value = '';
+  const adminRoleGroup = document.getElementById('adminRoleGroup');
+  const kasatdikSatdikGroup = document.getElementById('kasatdikSatdikGroup');
+  const hint = document.getElementById('userTypeHint');
+
+  if (userType === 'KASATDIK') {
+    if (adminRoleGroup) adminRoleGroup.style.display = 'none';
+    if (kasatdikSatdikGroup) kasatdikSatdikGroup.style.display = 'block';
+    if (satdik) satdik.disabled = false;
+    if (roleSelect) roleSelect.value = 'PENGURUS_DAERAH';
+    if (hint) hint.innerText = 'Mode Kasatdik: pilih satdik dan role otomatis KASATDIK.';
+  } else {
+    if (adminRoleGroup) adminRoleGroup.style.display = 'block';
+    if (kasatdikSatdikGroup) kasatdikSatdikGroup.style.display = 'none';
+    if (satdik) {
+      satdik.disabled = true;
+      satdik.value = '';
+    }
+    if (hint) hint.innerText = 'Mode Admin/Pengurus: satdik tidak wajib.';
+  }
 }
 
 function resetUserForm() {
@@ -678,9 +827,11 @@ function resetUserForm() {
   if (form) form.reset();
   const userId = document.getElementById('userFormId');
   if (userId) userId.value = '';
+  const userType = document.getElementById('userType');
+  if (userType) userType.value = 'ADMIN';
   const submit = document.getElementById('userSubmitBtn');
   if (submit) submit.innerText = 'Tambah User';
-  handleUserRoleChange();
+  handleUserTypeChange();
 }
 
 function editUser(id) {
@@ -691,24 +842,34 @@ function editUser(id) {
   document.getElementById('userNama').value = user.nama || '';
   document.getElementById('userUsername').value = user.username || '';
   document.getElementById('userPassword').value = '';
-  document.getElementById('userRole').value = user.role || 'KASATDIK';
+  document.getElementById('userRole').value = (user.role === 'SUPER_ADMIN' || user.role === 'PENGURUS_DAERAH') ? user.role : 'PENGURUS_DAERAH';
   document.getElementById('userSatdik').value = user.satdikId || '';
+  document.getElementById('userType').value = user.role === 'KASATDIK' ? 'KASATDIK' : 'ADMIN';
 
   const submit = document.getElementById('userSubmitBtn');
   if (submit) submit.innerText = 'Update User';
 
-  handleUserRoleChange();
+  handleUserTypeChange();
 }
 
 async function submitUserForm(event) {
   event.preventDefault();
 
   const id = document.getElementById('userFormId').value;
+  const userType = document.getElementById('userType').value;
+  const selectedSatdikId = document.getElementById('userSatdik').value;
+  const selectedRole = document.getElementById('userRole').value;
+
+  if (userType === 'KASATDIK' && !selectedSatdikId) {
+    alert('Satdik wajib dipilih untuk akun Kasatdik.');
+    return;
+  }
+
   const payload = {
     nama: document.getElementById('userNama').value,
     username: document.getElementById('userUsername').value,
-    role: document.getElementById('userRole').value,
-    satdikId: document.getElementById('userRole').value === 'KASATDIK' ? document.getElementById('userSatdik').value : ''
+    role: userType === 'KASATDIK' ? 'KASATDIK' : selectedRole,
+    satdikId: userType === 'KASATDIK' ? selectedSatdikId : ''
   };
 
   const password = document.getElementById('userPassword').value;
@@ -809,17 +970,23 @@ async function loadAdminPanel() {
     return;
   }
 
-  await loadSatdikOptions();
+  await loadSatdikAdminData();
   await loadUsers();
 
   const canManageUsers = state.user.role === 'SUPER_ADMIN';
   const userForm = document.getElementById('userForm');
+  const satdikForm = document.getElementById('satdikForm');
   const saveHeaderBtn = document.getElementById('saveHeaderSettingBtn');
 
   if (userForm) {
     userForm.style.display = canManageUsers ? 'block' : 'none';
   }
+  if (satdikForm) {
+    satdikForm.style.display = canManageUsers ? 'block' : 'none';
+  }
   if (saveHeaderBtn) {
     saveHeaderBtn.style.display = canManageUsers ? 'inline-block' : 'none';
   }
+
+  handleUserTypeChange();
 }

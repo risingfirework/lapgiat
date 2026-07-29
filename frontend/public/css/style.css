@@ -561,6 +561,16 @@ body.auth-mode {
   margin-top: 0.5rem;
 }
 
+.admin-type-hint {
+  align-self: end;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border-color);
+  background: #ffffff;
+}
+
 .mobile-action-bar {
   display: none;
 }

@@ -1,4 +1,6 @@
 const { db: SatdikDB } = require('../models/Satdik');
+const { db: UserDB } = require('../models/User');
+const { db: LapgiatDB } = require('../models/Lapgiat');
 
 const getAllSatdik = async (req, res, next) => {
   try {
@@ -75,8 +77,79 @@ const getSatdikById = async (req, res, next) => {
   }
 };
 
+const updateSatdik = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { kodeSatdik, nama, jenjang, alamat, orderIndex } = req.body;
+
+    const existing = await SatdikDB.findById(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Satdik tidak ditemukan.' });
+    }
+
+    const payload = {
+      kodeSatdik: kodeSatdik || existing.kodeSatdik,
+      nama: nama || existing.nama,
+      jenjang: (jenjang || existing.jenjang || '').toUpperCase(),
+      alamat: alamat !== undefined ? alamat : existing.alamat,
+      orderIndex: orderIndex !== undefined ? orderIndex : existing.orderIndex
+    };
+
+    const duplicateKode = await SatdikDB.findOne(item =>
+      String(item.id) !== String(id) &&
+      String(item.kodeSatdik || '').toUpperCase() === String(payload.kodeSatdik || '').toUpperCase()
+    );
+
+    if (duplicateKode) {
+      return res.status(409).json({
+        success: false,
+        message: 'Kode Satdik sudah digunakan oleh satdik lain.'
+      });
+    }
+
+    const updated = await SatdikDB.update(id, payload);
+    return res.status(200).json({ success: true, data: updated });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteSatdik = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const existing = await SatdikDB.findById(id);
+
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Satdik tidak ditemukan.' });
+    }
+
+    const userUsingSatdik = await UserDB.findOne(item => String(item.satdikId) === String(id));
+    if (userUsingSatdik) {
+      return res.status(400).json({
+        success: false,
+        message: 'Satdik tidak bisa dihapus karena masih dipakai oleh data user.'
+      });
+    }
+
+    const lapgiatUsingSatdik = await LapgiatDB.findOne(item => String(item.satdikId) === String(id));
+    if (lapgiatUsingSatdik) {
+      return res.status(400).json({
+        success: false,
+        message: 'Satdik tidak bisa dihapus karena masih dipakai oleh data lapgiat.'
+      });
+    }
+
+    await SatdikDB.delete(id);
+    return res.status(200).json({ success: true, message: 'Satdik berhasil dihapus.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllSatdik,
   createSatdik,
-  getSatdikById
+  getSatdikById,
+  updateSatdik,
+  deleteSatdik
 };
