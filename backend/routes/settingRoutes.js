@@ -11,5 +11,7 @@ router.get('/header', settingController.getHeaderSetting);
 router.put('/header', roleMiddleware('SUPER_ADMIN'), handleHeaderLogoUpload, settingController.updateHeaderSetting);
 router.get('/pdf-kop', settingController.getPdfKopSetting);
 router.put('/pdf-kop', roleMiddleware('SUPER_ADMIN'), settingController.updatePdfKopSetting);
+router.get('/academic-years', settingController.getAcademicYears);
+router.put('/academic-years/current', roleMiddleware('SUPER_ADMIN'), settingController.setCurrentAcademicYear);
 
 module.exports = router;

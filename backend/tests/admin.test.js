@@ -155,4 +155,37 @@ describe('--- TDD Suite 6: Admin User CRUD & Header Setting ---', () => {
     assert.ok(res.body.data.orgLine1);
     assert.ok(res.body.data.signatureName);
   });
+
+  test('PUT /api/v1/settings/academic-years/current - Pengurus cannot update academic year', async () => {
+    const res = await request(app)
+      .put('/api/v1/settings/academic-years/current')
+      .set('Authorization', `Bearer ${pengurusToken}`)
+      .send({ year: '2026/2027' });
+
+    assert.strictEqual(res.statusCode, 403);
+    assert.strictEqual(res.body.success, false);
+  });
+
+  test('PUT /api/v1/settings/academic-years/current - Super Admin can set current academic year', async () => {
+    const res = await request(app)
+      .put('/api/v1/settings/academic-years/current')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ year: '2026/2027' });
+
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(res.body.success, true);
+    assert.strictEqual(res.body.data.year, '2026/2027');
+    assert.strictEqual(res.body.data.isCurrent, true);
+  });
+
+  test('GET /api/v1/settings/academic-years - Returns active academic year', async () => {
+    const res = await request(app)
+      .get('/api/v1/settings/academic-years')
+      .set('Authorization', `Bearer ${pengurusToken}`);
+
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(res.body.success, true);
+    assert.strictEqual(res.body.data.current.year, '2026/2027');
+    assert.ok(Array.isArray(res.body.data.years));
+  });
 });

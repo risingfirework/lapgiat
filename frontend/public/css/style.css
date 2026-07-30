@@ -1029,3 +1029,24 @@ body.auth-mode {
   border-radius: 8px;
   object-fit: cover;
 }
+
+.preview-wrapper {
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+
+.preview-remove {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: #dc2626;
+  color: #fff;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 20px;
+}

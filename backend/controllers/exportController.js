@@ -3,16 +3,34 @@ const { db: LapgiatDB } = require('../models/Lapgiat');
 const { db: LapgiatMediaDB } = require('../models/LapgiatMedia');
 const { db: SatdikDB } = require('../models/Satdik');
 const { db: AppSettingDB } = require('../models/AppSetting');
+const { db: AcademicYearDB } = require('../models/AcademicYear');
 const { PDF_KOP_SETTING_KEY, DEFAULT_PDF_KOP } = require('./settingController');
 const path = require('path');
 const fs = require('fs');
+
+const INDONESIAN_DAYS = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUM’AT', 'SABTU'];
+const INDONESIAN_MONTHS = [
+  'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
+  'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'
+];
+
+const formatReportDate = (dateValue) => {
+  const parts = String(dateValue || '').split('-').map(Number);
+  if (parts.length !== 3 || parts.some(Number.isNaN)) return String(dateValue || '').toUpperCase();
+
+  const [year, month, day] = parts;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return `${INDONESIAN_DAYS[date.getUTCDay()]}, ${day} ${INDONESIAN_MONTHS[month - 1]} ${year}`;
+};
 
 const exportPdf = async (req, res, next) => {
   try {
     const { tanggal, tahunAjaran } = req.query;
 
     const queryDate = tanggal || '2026-06-24';
-    const queryTA = tahunAjaran || '2025/2026';
+    const academicYears = await AcademicYearDB.find();
+    const currentAcademicYear = academicYears.find(item => item.isCurrent);
+    const queryTA = tahunAjaran || currentAcademicYear?.year || '2025/2026';
 
     const satdikList = await SatdikDB.find();
     const orderMap = { TK: 1, SD: 2, SMP: 3, SMK: 4, SMA: 5, PENGURUS: 6 };
@@ -47,126 +65,202 @@ const exportPdf = async (req, res, next) => {
       }
     });
 
-    // Setup PDF Document
-    const doc = new PDFDocument({ margin: 40, size: 'A4' });
-    const startX = 24;
+    const doc = new PDFDocument({
+      size: 'A4',
+      margin: 0,
+      autoFirstPage: true,
+      info: {
+        Title: `Lapgiat Harian ${queryDate}`,
+        Author: 'Yayasan Hang Tuah Pengurus Daerah Jakarta'
+      }
+    });
+    const startX = 44;
+    const tableWidth = 516;
+    const colWidths = [98, 228, 190];
+    const pageBottom = 806;
+    const cellPaddingX = 6;
+    const cellPaddingY = 7;
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=Lapgiat_${queryDate}.pdf`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=Lapgiathar_di_Lingkungan_Daerah_Jakarta_YHT_tgl_${queryDate}.pdf`
+    );
 
     doc.pipe(res);
 
-    // Header
-    doc.font('Helvetica-Bold').fontSize(12).text(kop.orgLine1, startX, doc.y, { width: 550, align: orgHeaderAlign });
-    doc.font('Helvetica-Bold').fontSize(12).text(kop.orgLine2, startX, doc.y, { width: 550, align: orgHeaderAlign });
-    doc.moveDown(0.5);
+    const strokeCell = (x, y, width, height) => {
+      doc.lineWidth(0.45).rect(x, y, width, height).stroke('#555555');
+    };
 
-    doc.font('Helvetica-Bold').fontSize(13).text(kop.titleLine1, startX, doc.y, { width: 550, align: titleHeaderAlign });
-    doc.font('Helvetica-Bold').fontSize(13).text(kop.titleLine2, startX, doc.y, { width: 550, align: titleHeaderAlign });
-    doc.font('Helvetica-Bold').fontSize(11).text(`TAHUN AJARAN ${queryTA}`, startX, doc.y, { width: 550, align: yearHeaderAlign });
-    doc.moveDown(0.5);
+    const drawNumberRow = (y) => {
+      const height = 10;
+      let x = startX;
+      doc.fillColor('#111111').font('Helvetica').fontSize(7);
+      colWidths.forEach((width, index) => {
+        strokeCell(x, y, width, height);
+        doc.text(String(index + 1), x, y + 1.5, { width, align: 'center' });
+        x += width;
+      });
+      return y + height;
+    };
 
-    doc.font('Helvetica-Bold').fontSize(11).text(`TANGGAL: ${queryDate.toUpperCase()}`, { align: 'center' });
-    doc.moveDown(1);
+    const drawColumnHeader = (y) => {
+      const height = 23;
+      let x = startX;
+      doc.fillColor('#111111').font('Helvetica-Bold').fontSize(9);
+      ['YHT/SATDIK', 'KEGIATAN', 'KETERANGAN'].forEach((label, index) => {
+        const width = colWidths[index];
+        strokeCell(x, y, width, height);
+        doc.text(label, x, y + 7, {
+          width,
+          align: 'center',
+          characterSpacing: 1.3
+        });
+        x += width;
+      });
+      return drawNumberRow(y + height);
+    };
 
-    // Table Headers
-    let currentY = doc.y;
-    const colWidths = [95, 145, 145, 145]; // Total width ~ 530
+    const addContinuationPage = () => {
+      doc.addPage({ size: 'A4', margin: 0 });
+      return drawNumberRow(68);
+    };
 
-    doc.rect(startX, currentY, 550, 25).fillAndStroke('#f0f0f0', '#000000');
-    doc.fillColor('#000000').font('Helvetica-Bold').fontSize(9);
+    // Kop dan judul mengikuti posisi pada dokumen contoh.
+    const orgX = orgHeaderAlign === 'left' ? 57 : startX;
+    const orgWidth = orgHeaderAlign === 'left' ? 205 : tableWidth;
+    doc.fillColor('#111111').font('Helvetica').fontSize(8.5);
+    doc.text(kop.orgLine1, orgX, 25, {
+      width: orgWidth,
+      align: orgHeaderAlign,
+      characterSpacing: 2.1
+    });
+    doc.text(kop.orgLine2, orgX, 39, {
+      width: orgWidth,
+      align: orgHeaderAlign,
+      characterSpacing: 1.75,
+      underline: true
+    });
 
-    doc.text('YHT / SATDIK', startX + 5, currentY + 7, { width: colWidths[0] - 10, align: 'center' });
-    doc.text('KEGIATAN', startX + colWidths[0] + 5, currentY + 7, { width: colWidths[1] - 10, align: 'center' });
-    doc.text('KETERANGAN', startX + colWidths[0] + colWidths[1] + 5, currentY + 7, { width: colWidths[2] - 10, align: 'center' });
-    doc.text('MEDIA', startX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 7, { width: colWidths[3] - 10, align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(10.5);
+    doc.text(kop.titleLine1, startX, 68, {
+      width: tableWidth,
+      align: titleHeaderAlign,
+      characterSpacing: 2.4
+    });
+    doc.text(kop.titleLine2, startX, 84, {
+      width: tableWidth,
+      align: titleHeaderAlign,
+      characterSpacing: 2.1
+    });
+    doc.text(`TAHUN AJARAN ${queryTA}`, startX, 100, {
+      width: tableWidth,
+      align: yearHeaderAlign,
+      characterSpacing: 1.7
+    });
+    doc.font('Helvetica-Bold').fontSize(10.5).text(formatReportDate(queryDate), startX, 128, {
+      width: tableWidth,
+      align: 'center',
+      characterSpacing: 1.5
+    });
 
-    currentY += 25;
+    let currentY = drawColumnHeader(152);
 
-    // Table Content Rows
     for (const satdik of satdikList) {
       const lapgiat = lapgiatMap.get(String(satdik.id));
+      if (!lapgiat) continue;
 
-      const satdikName = satdik.nama;
-      const kegiatanText = lapgiat ? lapgiat.uraianKegiatan : '- Belum ada laporan -';
-      const keteranganText = lapgiat ? lapgiat.keteranganPeserta : '-';
-      const mediaList = lapgiat ? (mediaMap.get(String(lapgiat.id)) || []) : [];
+      const texts = [
+        satdik.nama || '-',
+        lapgiat.uraianKegiatan || '-',
+        lapgiat.keteranganPeserta || '-'
+      ];
+      const mediaList = (mediaMap.get(String(lapgiat.id)) || [])
+        .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0))
+        .slice(0, 4);
 
-      const rowHeight = 110;
+      doc.font('Helvetica').fontSize(9.5);
+      const textHeights = texts.map((text, index) =>
+        doc.heightOfString(text, { width: colWidths[index] - (cellPaddingX * 2), lineGap: 1.2 })
+      );
+      const textRowHeight = Math.max(43, Math.ceil(Math.max(...textHeights) + (cellPaddingY * 2)));
+      const photoRows = mediaList.length > 0 ? Math.ceil(mediaList.length / 2) : 0;
+      const photoRowHeight = photoRows > 0 ? photoRows * 150 : 0;
+      const blockHeight = textRowHeight + photoRowHeight;
 
-      // Check for Page Overflow
-      if (currentY + rowHeight > 750) {
-        doc.addPage();
-        currentY = 40;
+      if (currentY + blockHeight > pageBottom) {
+        currentY = addContinuationPage();
       }
 
-      // Draw Row Border
-      doc.rect(startX, currentY, colWidths[0], rowHeight).stroke();
-      doc.rect(startX + colWidths[0], currentY, colWidths[1], rowHeight).stroke();
-      doc.rect(startX + colWidths[0] + colWidths[1], currentY, colWidths[2], rowHeight).stroke();
-      doc.rect(startX + colWidths[0] + colWidths[1] + colWidths[2], currentY, colWidths[3], rowHeight).stroke();
-
-      // Column 1: Satdik
-      doc.font('Helvetica-Bold').fontSize(8.5).text(satdikName, startX + 5, currentY + 8, {
-        width: colWidths[0] - 10,
-        align: 'left'
+      let x = startX;
+      texts.forEach((text, index) => {
+        const width = colWidths[index];
+        strokeCell(x, currentY, width, textRowHeight);
+        doc.fillColor('#111111').font('Helvetica').fontSize(9.5).text(
+          text,
+          x + cellPaddingX,
+          currentY + cellPaddingY,
+          {
+            width: width - (cellPaddingX * 2),
+            height: textRowHeight - (cellPaddingY * 2),
+            lineGap: 1.2
+          }
+        );
+        x += width;
       });
+      currentY += textRowHeight;
 
-      // Column 2: Kegiatan
-      doc.font('Helvetica').fontSize(8).text(kegiatanText, startX + colWidths[0] + 5, currentY + 8, {
-        width: colWidths[1] - 10,
-        align: 'left'
-      });
-
-      // Column 3: Keterangan
-      doc.font('Helvetica').fontSize(8).text(keteranganText, startX + colWidths[0] + colWidths[1] + 5, currentY + 8, {
-        width: colWidths[2] - 10,
-        align: 'left'
-      });
-
-      // Column 4: Media Dokumentasi
-      const photoX = startX + colWidths[0] + colWidths[1] + colWidths[2] + 5;
-      const photoY = currentY + 8;
-      if (mediaList.length > 0) {
-        for (let p = 0; p < Math.min(mediaList.length, 4); p++) {
-          const relPath = mediaList[p].path || '';
+      if (photoRows > 0) {
+        strokeCell(startX, currentY, tableWidth, photoRowHeight);
+        const photoCellWidth = tableWidth / 2;
+        mediaList.forEach((media, index) => {
+          const relPath = media.path || '';
           const photoPath = relPath.startsWith('/uploads/')
             ? path.join(__dirname, '..', 'uploads', path.basename(relPath))
             : path.join(__dirname, '..', relPath);
+          if (!fs.existsSync(photoPath)) return;
 
-          if (fs.existsSync(photoPath)) {
-            try {
-              const row = Math.floor(p / 2);
-              const col = p % 2;
-              doc.image(photoPath, photoX + (col * 68), photoY + (row * 38), { fit: [60, 32] });
-            } catch (e) {
-              // Ignore corrupted images
-            }
+          const row = Math.floor(index / 2);
+          const col = index % 2;
+          const photoX = startX + (col * photoCellWidth) + 2;
+          const photoY = currentY + (row * 150) + 2;
+          try {
+            doc.image(photoPath, photoX, photoY, {
+              fit: [photoCellWidth - 4, 146],
+              align: 'center',
+              valign: 'center'
+            });
+          } catch (e) {
+            // File gambar rusak tidak menggagalkan seluruh laporan.
           }
-        }
-      } else {
-        doc.font('Helvetica-Oblique').fontSize(7).text('Tidak ada dokumentasi', photoX, photoY + 12, {
-          width: colWidths[3] - 10,
-          align: 'center'
         });
+        currentY += photoRowHeight;
       }
-
-      currentY += rowHeight;
     }
 
-    // TTD Section
-    if (currentY + 100 > 750) {
-      doc.addPage();
-      currentY = 40;
+    if (currentY + 75 > pageBottom) {
+      doc.addPage({ size: 'A4', margin: 0 });
+      currentY = 68;
     }
 
-    currentY += 20;
-    const ttdX = 350;
-    doc.font('Helvetica-Bold').fontSize(9).text(kop.signatureTitle, ttdX, currentY, { align: 'center' });
-    currentY += 15;
-    doc.font('Helvetica').fontSize(8.5).text('Ttd', ttdX, currentY, { align: 'center' });
-    currentY += 40;
-    doc.font('Helvetica-Bold').fontSize(9.5).text(kop.signatureName, ttdX, currentY, { align: 'center' });
+    const signatureX = startX + colWidths[0] + colWidths[1];
+    currentY += 21;
+    doc.fillColor('#111111').font('Helvetica').fontSize(8.5).text(kop.signatureTitle, signatureX, currentY, {
+      width: colWidths[2],
+      align: 'center',
+      characterSpacing: 1.25
+    });
+    doc.text('Ttd', signatureX, currentY + 18, {
+      width: colWidths[2],
+      align: 'center',
+      characterSpacing: 1
+    });
+    doc.text(kop.signatureName, signatureX, currentY + 34, {
+      width: colWidths[2],
+      align: 'center',
+      characterSpacing: 1.1
+    });
 
     doc.end();
   } catch (error) {

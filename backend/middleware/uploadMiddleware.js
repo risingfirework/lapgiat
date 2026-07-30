@@ -1,6 +1,6 @@
 const { upload } = require('../config/storage');
 
-const uploadPhotos = upload.array('photos', 6);
+const uploadPhotos = upload.array('photos', 4);
 const uploadHeaderLogo = upload.single('headerLogo');
 
 const handleUpload = (req, res, next) => {

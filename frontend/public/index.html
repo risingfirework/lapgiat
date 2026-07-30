@@ -165,7 +165,7 @@
 
       <div class="data-card preview-card">
         <h3 class="preview-title">Pratinjau Format Dokumen Laporan</h3>
-        <p class="preview-description">Dokumen PDF secara otomatis menyusun seluruh kegiatan Satdik dalam struktur tabel 4 kolom resmi Yayasan Hang Tuah Pengurus Daerah Jakarta.</p>
+        <p class="preview-description">Dokumen PDF menyusun kegiatan Satdik dalam tabel 3 kolom, dengan dokumentasi foto pada baris penuh seperti format resmi Yayasan Hang Tuah Pengurus Daerah Jakarta.</p>
         <div id="pdfPreviewStatus" class="preview-status">Memuat pratinjau...</div>
         <iframe id="pdfPreviewFrame" class="preview-frame" src="about:blank"></iframe>
       </div>
@@ -177,6 +177,7 @@
         <aside class="admin-sidebar data-card">
           <h3 class="admin-sidebar-title">Menu Admin</h3>
           <button id="adminMenuHeader" class="admin-menu-btn active" type="button" onclick="switchAdminSection('header')">Pengaturan Header Logo</button>
+          <button id="adminMenuAcademicYear" class="admin-menu-btn" type="button" onclick="switchAdminSection('academicYear')">Pengaturan Tahun Ajaran</button>
           <button id="adminMenuSatdik" class="admin-menu-btn" type="button" onclick="switchAdminSection('satdik')">CRUD Satdik</button>
           <button id="adminMenuUser" class="admin-menu-btn" type="button" onclick="switchAdminSection('user')">CRUD User</button>
         </aside>
@@ -274,6 +275,39 @@
                 <p class="pdf-kop-preview-ttd">Ttd</p>
                 <p id="pdfKopPreviewSignatureName" class="pdf-kop-preview-signature-name">Ny. Hening Uki Prasetia</p>
               </div>
+            </div>
+          </section>
+
+          <section id="adminPanelAcademicYear" class="data-card admin-card admin-panel" style="display: none;">
+            <h3 class="admin-title">Pengaturan Tahun Ajaran</h3>
+            <p style="color:#64748b; margin-bottom:1rem;">Tahun ajaran aktif digunakan otomatis pada kop laporan PDF.</p>
+            <form id="academicYearForm" class="admin-user-form" onsubmit="saveAcademicYear(event)">
+              <div class="admin-grid">
+                <div class="form-group">
+                  <label for="academicYearInput">Tahun Ajaran</label>
+                  <input type="text" id="academicYearInput" class="form-control" placeholder="Contoh: 2026/2027" pattern="\d{4}/\d{4}" maxlength="9" required>
+                  <small class="form-hint">Gunakan format YYYY/YYYY, misalnya 2026/2027.</small>
+                </div>
+                <div class="form-group">
+                  <label>Tahun Ajaran Aktif</label>
+                  <div id="currentAcademicYear" class="form-control" style="background:#f8fafc; font-weight:700;">-</div>
+                </div>
+              </div>
+              <div class="modal-actions admin-actions">
+                <button id="saveAcademicYearBtn" class="btn-primary" type="submit">Simpan dan Aktifkan</button>
+              </div>
+            </form>
+            <div class="table-responsive" style="margin-top:1.25rem;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Tahun Ajaran</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="academicYearTableBody"></tbody>
+              </table>
             </div>
           </section>
 
@@ -420,11 +454,12 @@
           <input type="text" id="inputKeterangan" class="form-control" placeholder="Contoh: Diikuti oleh semua Murid Kelompok A dan B" required>
         </div>
         <div class="form-group">
-          <label>Foto Dokumentasi (Maks 4 Foto)</label>
+          <label>Foto Dokumentasi (Maks. 4 Foto)</label>
           <div class="upload-zone" onclick="document.getElementById('inputPhotos').click()">
             📷 Klik di sini untuk memilih foto kegiatan
             <input type="file" id="inputPhotos" multiple accept="image/*" style="display: none;" onchange="previewImages(event)">
           </div>
+          <small class="form-hint">Foto dapat dipilih sekaligus atau ditambahkan bertahap.</small>
           <div class="preview-grid" id="photoPreviewContainer"></div>
         </div>
         <div class="modal-actions">

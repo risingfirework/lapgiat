@@ -5,6 +5,9 @@ let state = {
   user: null,
   activeLapgiatId: null,
   editingLapgiatId: null,
+  selectedPhotos: [],
+  existingMedia: [],
+  academicYears: [],
   adminUsers: [],
   satdikList: [],
   adminSatdik: []
@@ -319,6 +322,8 @@ function openCreateModal() {
   document.getElementById('createLapgiatForm').reset();
   document.getElementById('photoPreviewContainer').innerHTML = '';
   state.editingLapgiatId = null;
+  state.selectedPhotos = [];
+  state.existingMedia = [];
 }
 
 function closeCreateModal() {
@@ -327,10 +332,14 @@ function closeCreateModal() {
   document.getElementById('createLapgiatForm').reset();
   document.getElementById('photoPreviewContainer').innerHTML = '';
   state.editingLapgiatId = null;
+  state.selectedPhotos = [];
+  state.existingMedia = [];
 }
 
 function openEditModal(id) {
   state.editingLapgiatId = id;
+  state.selectedPhotos = [];
+  state.existingMedia = [];
   document.getElementById('createModal').style.display = 'flex';
   document.getElementById('createModalTitle').innerText = 'Perbarui Laporan Kegiatan';
   document.getElementById('submitLapgiatBtn').innerText = 'Simpan Perubahan';
@@ -345,6 +354,8 @@ function openEditModal(id) {
       document.getElementById('inputTanggal').value = item.tanggalKegiatan || '';
       document.getElementById('inputUraian').value = item.uraianKegiatan || '';
       document.getElementById('inputKeterangan').value = item.keteranganPeserta || '';
+      state.existingMedia = Array.isArray(item.media) ? item.media : [];
+      renderPhotoPreviews();
     })
     .catch(() => {
       alert('Gagal memuat detail laporan untuk diubah.');
@@ -353,26 +364,59 @@ function openEditModal(id) {
 }
 
 function previewImages(event) {
-  const container = document.getElementById('photoPreviewContainer');
-  container.innerHTML = '';
-  const files = Array.from(event.target.files || []);
+  const newFiles = Array.from(event.target.files || []);
+  const availableSlots = 4 - state.existingMedia.length - state.selectedPhotos.length;
 
-  if (files.length > 4) {
-    alert('Maksimal 4 foto dokumentasi yang bisa diunggah.');
+  if (newFiles.length > availableSlots) {
+    alert(`Maksimal 4 foto dokumentasi. Anda masih dapat menambahkan ${Math.max(availableSlots, 0)} foto.`);
     event.target.value = '';
     return;
   }
 
-  for (let file of files) {
+  state.selectedPhotos.push(...newFiles);
+  event.target.value = '';
+  renderPhotoPreviews();
+}
+
+function renderPhotoPreviews() {
+  const container = document.getElementById('photoPreviewContainer');
+  container.innerHTML = '';
+
+  for (const media of state.existingMedia) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'preview-wrapper';
+    const img = document.createElement('img');
+    img.src = media.path || '';
+    img.alt = 'Foto dokumentasi tersimpan';
+    img.className = 'preview-item';
+    wrapper.appendChild(img);
+    container.appendChild(wrapper);
+  }
+
+  state.selectedPhotos.forEach((file, index) => {
     const reader = new FileReader();
     reader.onload = (e) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'preview-wrapper';
       const img = document.createElement('img');
       img.src = e.target.result;
+      img.alt = file.name;
       img.className = 'preview-item';
-      container.appendChild(img);
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'preview-remove';
+      removeButton.innerHTML = '&times;';
+      removeButton.setAttribute('aria-label', `Hapus ${file.name}`);
+      removeButton.onclick = () => {
+        state.selectedPhotos.splice(index, 1);
+        renderPhotoPreviews();
+      };
+      wrapper.appendChild(img);
+      wrapper.appendChild(removeButton);
+      container.appendChild(wrapper);
     };
     reader.readAsDataURL(file);
-  }
+  });
 }
 
 async function submitLapgiat(e) {
@@ -384,9 +428,8 @@ async function submitLapgiat(e) {
   const satdikId = state.user?.satdik?.id || state.user?.satdikId;
   if (satdikId) formData.append('satdikId', satdikId);
 
-  const fileInput = document.getElementById('inputPhotos');
-  const files = Array.from(fileInput.files || []);
-  if (files.length > 4) {
+  const files = state.selectedPhotos;
+  if (state.existingMedia.length + files.length > 4) {
     alert('Maksimal 4 foto dokumentasi yang bisa diunggah.');
     return;
   }
@@ -599,12 +642,14 @@ function previewSelectedHeaderLogo(event) {
 function switchAdminSection(section) {
   const panelMap = {
     header: 'adminPanelHeader',
+    academicYear: 'adminPanelAcademicYear',
     satdik: 'adminPanelSatdik',
     user: 'adminPanelUser'
   };
 
   const buttonMap = {
     header: 'adminMenuHeader',
+    academicYear: 'adminMenuAcademicYear',
     satdik: 'adminMenuSatdik',
     user: 'adminMenuUser'
   };
@@ -616,6 +661,88 @@ function switchAdminSection(section) {
     if (panel) panel.style.display = key === section ? 'block' : 'none';
     if (btn) btn.classList.toggle('active', key === section);
   });
+}
+
+async function loadAcademicYears() {
+  if (!state.token) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/settings/academic-years`, {
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+    const data = await res.json();
+    if (!data.success) return;
+
+    state.academicYears = data.data?.years || [];
+    const current = data.data?.current || null;
+    const currentLabel = document.getElementById('currentAcademicYear');
+    if (currentLabel) currentLabel.textContent = current?.year || 'Belum ditentukan';
+
+    const input = document.getElementById('academicYearInput');
+    if (input && !input.value) input.value = current?.year || '';
+    renderAcademicYears();
+  } catch (err) {
+    console.error('Gagal memuat tahun ajaran', err);
+  }
+}
+
+function renderAcademicYears() {
+  const tbody = document.getElementById('academicYearTableBody');
+  if (!tbody) return;
+
+  if (!state.academicYears.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#64748b;">Belum ada tahun ajaran.</td></tr>';
+    return;
+  }
+
+  const canManage = state.user?.role === 'SUPER_ADMIN';
+  tbody.innerHTML = state.academicYears.map(item => `
+    <tr>
+      <td>${escapeHtml(item.year)}</td>
+      <td>${item.isCurrent ? '<span class="badge badge-approved">Aktif</span>' : '<span class="badge">Tidak aktif</span>'}</td>
+      <td>
+        ${canManage && !item.isCurrent
+          ? `<button type="button" class="btn-primary btn-inline" onclick="activateAcademicYear('${escapeHtml(item.year)}')">Aktifkan</button>`
+          : '-'}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function activateAcademicYear(year) {
+  const input = document.getElementById('academicYearInput');
+  if (input) input.value = year;
+  document.getElementById('academicYearForm')?.requestSubmit();
+}
+
+async function saveAcademicYear(event) {
+  event.preventDefault();
+  if (state.user?.role !== 'SUPER_ADMIN') {
+    alert('Hanya SUPER_ADMIN yang dapat mengubah tahun ajaran.');
+    return;
+  }
+
+  const year = document.getElementById('academicYearInput')?.value.trim() || '';
+  try {
+    const res = await fetch(`${API_BASE}/settings/academic-years/current`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`
+      },
+      body: JSON.stringify({ year })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      alert(data.message || 'Gagal menyimpan tahun ajaran.');
+      return;
+    }
+
+    await loadAcademicYears();
+    alert(data.message || 'Tahun ajaran berhasil diperbarui.');
+  } catch (err) {
+    alert('Terjadi kesalahan saat menyimpan tahun ajaran.');
+  }
 }
 
 async function loadHeaderSetting() {
@@ -1130,12 +1257,14 @@ async function loadAdminPanel() {
   await loadSatdikAdminData();
   await loadUsers();
   await loadPdfKopSetting();
+  await loadAcademicYears();
 
   const canManageUsers = state.user.role === 'SUPER_ADMIN';
   const userForm = document.getElementById('userForm');
   const satdikForm = document.getElementById('satdikForm');
   const saveHeaderBtn = document.getElementById('saveHeaderSettingBtn');
   const savePdfKopBtn = document.getElementById('savePdfKopBtn');
+  const academicYearForm = document.getElementById('academicYearForm');
 
   if (userForm) {
     userForm.style.display = canManageUsers ? 'block' : 'none';
@@ -1148,6 +1277,11 @@ async function loadAdminPanel() {
   }
   if (savePdfKopBtn) {
     savePdfKopBtn.style.display = canManageUsers ? 'inline-block' : 'none';
+  }
+  if (academicYearForm) {
+    academicYearForm.querySelectorAll('input, button').forEach(field => {
+      field.disabled = !canManageUsers;
+    });
   }
 
   handleUserTypeChange();

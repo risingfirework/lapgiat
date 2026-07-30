@@ -198,9 +198,30 @@ const updateLapgiat = async (req, res, next) => {
       }
     }
 
-    const updated = await LapgiatDB.update(id, payload);
+    const existingMedia = await LapgiatMediaDB.find(m => String(m.lapgiatId) === String(id));
+    const newFiles = req.files || [];
+    if (existingMedia.length + newFiles.length > 4) {
+      return res.status(400).json({
+        success: false,
+        message: `Maksimal 4 foto dokumentasi. Laporan ini sudah memiliki ${existingMedia.length} foto.`
+      });
+    }
 
-    const mediaList = await LapgiatMediaDB.find(m => String(m.lapgiatId) === String(id));
+    const updated = await LapgiatDB.update(id, payload);
+    const mediaList = [...existingMedia];
+    for (let i = 0; i < newFiles.length; i++) {
+      const file = newFiles[i];
+      const media = await LapgiatMediaDB.create({
+        lapgiatId: id,
+        fileName: file.filename,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        path: `/uploads/${file.filename}`,
+        orderIndex: existingMedia.length + i + 1
+      });
+      mediaList.push(media);
+    }
 
     return res.status(200).json({
       success: true,

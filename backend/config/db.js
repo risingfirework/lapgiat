@@ -50,6 +50,7 @@ async function ensurePostgresConnection() {
           id TEXT PRIMARY KEY,
           year TEXT NOT NULL,
           is_current BOOLEAN DEFAULT FALSE,
+          updated_by TEXT,
           created_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ DEFAULT NOW()
         );
@@ -110,6 +111,10 @@ async function ensurePostgresConnection() {
         CREATE INDEX IF NOT EXISTS idx_users_satdik ON users(satdik_id);
         CREATE INDEX IF NOT EXISTS idx_lapgiat_satdik ON lapgiat(satdik_id);
         CREATE INDEX IF NOT EXISTS idx_lapgiat_media_lapgiat ON lapgiat_media(lapgiat_id);
+
+        -- Migrasi kompatibel untuk database yang dibuat sebelum menu tahun ajaran tersedia.
+        ALTER TABLE academic_years ADD COLUMN IF NOT EXISTS updated_by TEXT;
+        CREATE INDEX IF NOT EXISTS idx_academic_years_current ON academic_years(is_current);
       `);
 
       storageMode = 'postgres';

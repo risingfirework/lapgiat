@@ -1,4 +1,5 @@
 const { db: AppSettingDB } = require('../models/AppSetting');
+const { db: AcademicYearDB } = require('../models/AcademicYear');
 const fs = require('fs');
 const path = require('path');
 
@@ -7,7 +8,7 @@ const PDF_KOP_SETTING_KEY = 'pdf_kop';
 const DEFAULT_PDF_KOP = {
   orgLine1: 'YAYASAN HANG TUAH',
   orgLine2: 'PENGURUS DAERAH JAKARTA',
-  orgAlign: 'center',
+  orgAlign: 'left',
   titleLine1: 'KEGIATAN HARIAN DI LINGKUNGAN',
   titleLine2: 'DAERAH JAKARTA YAYASAN HANG TUAH',
   titleAlign: 'center',
@@ -167,11 +168,73 @@ const updatePdfKopSetting = async (req, res, next) => {
   }
 };
 
+const getAcademicYears = async (req, res, next) => {
+  try {
+    const years = await AcademicYearDB.find();
+    years.sort((a, b) => String(b.year || '').localeCompare(String(a.year || '')));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        current: years.find(item => item.isCurrent) || null,
+        years
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const setCurrentAcademicYear = async (req, res, next) => {
+  try {
+    const year = String(req.body.year || '').trim();
+    const match = year.match(/^(\d{4})\/(\d{4})$/);
+    if (!match || Number(match[2]) !== Number(match[1]) + 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Format tahun ajaran harus YYYY/YYYY dan berurutan, contoh 2026/2027.'
+      });
+    }
+
+    const years = await AcademicYearDB.find();
+    let selected = years.find(item => item.year === year);
+
+    for (const item of years) {
+      if (item.isCurrent && (!selected || String(item.id) !== String(selected.id))) {
+        await AcademicYearDB.update(item.id, { isCurrent: false });
+      }
+    }
+
+    if (selected) {
+      selected = await AcademicYearDB.update(selected.id, {
+        isCurrent: true,
+        updatedBy: req.user.id
+      });
+    } else {
+      selected = await AcademicYearDB.create({
+        year,
+        isCurrent: true,
+        updatedBy: req.user.id
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Tahun ajaran ${year} berhasil diaktifkan.`,
+      data: selected
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getHeaderSetting,
   updateHeaderSetting,
   getPdfKopSetting,
   updatePdfKopSetting,
+  getAcademicYears,
+  setCurrentAcademicYear,
   DEFAULT_PDF_KOP,
   PDF_KOP_SETTING_KEY
 };

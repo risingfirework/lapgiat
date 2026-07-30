@@ -32,12 +32,15 @@ describe('--- TDD Suite 3: Lapgiat Workflow & Approval Module ---', () => {
       .set('Authorization', `Bearer ${kasatdikToken}`)
       .field('tanggalKegiatan', reportDate)
       .field('uraianKegiatan', 'Latihan Marching Band dan Pembiasaan Keagamaan')
-      .field('keteranganPeserta', 'Diikuti oleh Murid Kelompok B');
+      .field('keteranganPeserta', 'Diikuti oleh Murid Kelompok B')
+      .attach('photos', Buffer.from('foto dokumentasi pertama'), 'dokumentasi-1.png')
+      .attach('photos', Buffer.from('foto dokumentasi kedua'), 'dokumentasi-2.png');
 
     assert.strictEqual(res.statusCode, 201);
     assert.strictEqual(res.body.success, true);
     assert.strictEqual(res.body.data.status, 'SUBMITTED');
     assert.ok(res.body.data.id);
+    assert.strictEqual(res.body.data.media.length, 2);
 
     createdLapgiatId = res.body.data.id;
   });
@@ -69,11 +72,13 @@ describe('--- TDD Suite 3: Lapgiat Workflow & Approval Module ---', () => {
       .set('Authorization', `Bearer ${kasatdikToken}`)
       .field('tanggalKegiatan', reportDate)
       .field('uraianKegiatan', 'Latihan Marching Band dan Pembiasaan Keagamaan (Diperbarui)')
-      .field('keteranganPeserta', 'Diikuti oleh Murid Kelompok B (Diperbarui)');
+      .field('keteranganPeserta', 'Diikuti oleh Murid Kelompok B (Diperbarui)')
+      .attach('photos', Buffer.from('foto dokumentasi tambahan'), 'dokumentasi-3.png');
 
     assert.strictEqual(res.statusCode, 200);
     assert.strictEqual(res.body.success, true);
     assert.strictEqual(res.body.data.uraianKegiatan, 'Latihan Marching Band dan Pembiasaan Keagamaan (Diperbarui)');
+    assert.strictEqual(res.body.data.media.length, 3);
   });
 
   test('PATCH /api/v1/lapgiat/:id/status - Approve Lapgiat as Pengurus', async () => {
